@@ -43,7 +43,7 @@ class AccountListScreen extends HookConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(acc.name),
+                    Text(acc.name, overflow: TextOverflow.ellipsis),
                     const Icon(CupertinoIcons.chevron_forward),
                   ],
                 ),

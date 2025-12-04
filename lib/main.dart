@@ -18,14 +18,10 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
 
-    return MaterialApp(
-      home: Material(child: Center(child: Text("Cash"))),
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      title: "Cashbook App",
+      routerConfig: router,
     );
-
-    // MaterialApp.router(
-    //   debugShowCheckedModeBanner: false,
-    //   title: "Cashbook App",
-    //   routerConfig: router,
-    // );
   }
 }

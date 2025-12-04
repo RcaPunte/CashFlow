@@ -1,5 +1,6 @@
 import 'package:cashledger/account/controller/account_controller.dart';
 import 'package:cashledger/cash_book/controller/cash_book_controller.dart';
+import 'package:cashledger/cash_book/repository/entries_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -100,7 +101,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   }
 
   onDelete(String id) {
-    ref.read(entriesListProvider.notifier).deleteEntry(id);
+    ref.read(entriesRepositoryProvider).deleteEntry(id);
     if (mounted) {
       Navigator.pop(context);
     }
@@ -109,7 +110,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsListProvider);
-    final entriesNotifier = ref.read(entriesListProvider.notifier);
+    final entriesNotifier = ref.read(entriesProvider);
 
     return Material(
       child: CupertinoPageScaffold(

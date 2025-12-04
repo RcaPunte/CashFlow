@@ -4,20 +4,24 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-final entriesControllerProvider = Provider((ref) => EntriesController());
+final entriesRepositoryProvider = Provider((ref) => EntriesRepository());
 
-class EntriesController {
+class EntriesRepository {
   final supabase = Supabase.instance.client;
 
   Future<List<Map<String, dynamic>>> fetchEntries() async {
     // final user = supabase.auth.currentUser;
     // if (user == null) return [];
-    final res = await supabase
-        .from('entries')
-        .select('*, accounts(name)')
-        // .eq('user_id', user.id)
-        .order('date', ascending: true);
-    return List<Map<String, dynamic>>.from(res);
+    try {
+      final res = await supabase
+          .from('entries')
+          .select('*, accounts(name)')
+          // .eq('user_id', user.id)
+          .order('date', ascending: true);
+      return List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 
   Future<void> addEntry({
