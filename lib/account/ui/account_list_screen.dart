@@ -2,7 +2,6 @@ import 'package:cashledger/account/controller/account_controller.dart'
     show accountControllerProvider;
 import 'package:cashledger/account/ui/account_edit_screen.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -11,46 +10,71 @@ class AccountListScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accounts = ref.watch(accountControllerProvider);
+    final accountsAsync = ref.watch(accountControllerProvider);
 
-    return Material(
-      child: CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(
-          middle: const Text("Accounts"),
-          trailing: GestureDetector(
-            onTap: () => context.push('/accounts/add'),
-            child: const Icon(CupertinoIcons.add),
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text("Accounts"),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => context.push('/accounts/add'),
+          child: const Icon(CupertinoIcons.add, size: 22),
+        ),
+      ),
+      backgroundColor: CupertinoColors.systemGroupedBackground,
+
+      child: accountsAsync.when(
+        loading: () =>
+            const Center(child: CupertinoActivityIndicator(radius: 18)),
+        error: (e, _) => Center(
+          child: Text(
+            "Error loading accounts: ${e.toString()}",
+            style: const TextStyle(color: CupertinoColors.systemRed),
           ),
         ),
-        child: accounts.when(
-          loading: () => const Center(child: CupertinoActivityIndicator()),
-          error: (e, _) => Center(child: Text(e.toString())),
-          data: (list) => ListView.builder(
-            itemCount: list.length,
-            itemBuilder: (_, i) {
-              final acc = list[i];
-              return CupertinoButton(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 16,
+        data: (list) {
+          if (list.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text(
+                  "No accounts found. Tap '+' to add a new account.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: CupertinoColors.systemGrey),
                 ),
-                onPressed: () => Navigator.push(
-                  context,
-                  CupertinoPageRoute(
-                    builder: (_) => AccountEditScreen(account: acc),
-                  ),
-                ), //context.push('/accounts/edit', extra: acc),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(acc.name, overflow: TextOverflow.ellipsis),
-                    const Icon(CupertinoIcons.chevron_forward),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
+              ),
+            );
+          }
+
+          // 🛠️ FIX APPLIED HERE: Wrap CupertinoListSection in a ListView
+          return ListView(
+            // Use a slight top padding to give space below the navigation bar
+            padding: const EdgeInsets.only(top: 10),
+            children: [
+              CupertinoListSection.insetGrouped(
+                children: [
+                  for (final acc in list)
+                    CupertinoListTile(
+                      title: Text(acc.name, overflow: TextOverflow.ellipsis),
+                      trailing: const Icon(
+                        CupertinoIcons.chevron_right,
+                        size: 18,
+                        color: CupertinoColors.systemGrey,
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(
+                            builder: (_) => AccountEditScreen(account: acc),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -1,15 +1,19 @@
 import 'package:cashledger/ledger/model/ledger_entry.dart';
-import 'package:cashledger/ledger/ui/widgets/ledger_details_pie.dart';
+import 'package:cashledger/ledger/ui/widgets/ledger_details_pie.dart'; // Assuming this leads to the detail screen
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // Retained for Material/InkWell context if needed, but not used here.
 import 'package:intl/intl.dart';
 
 class LedgerRowWidget extends StatelessWidget {
   final LedgerEntry entry;
   final double runningBalance;
+  // NOTE: bgColor is removed in favor of a cleaner separator line,
+  // but kept as a parameter for compatibility if the parent needs it.
+  final Color bgColor;
 
   const LedgerRowWidget({
     super.key,
+    required this.bgColor, // Keeping for compatibility, but using transparent color
     required this.entry,
     required this.runningBalance,
   });
@@ -17,177 +21,124 @@ class LedgerRowWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDebit = entry.type == 'debit';
+    final formatter = NumberFormat('#,##0.00', 'en_US');
 
+    // Use resolved colors for dynamic dark/light mode support
     final debitColor = CupertinoColors.activeGreen.resolveFrom(context);
     final creditColor = CupertinoColors.systemRed.resolveFrom(context);
-    final balanceColor = CupertinoColors.label.resolveFrom(context);
+    final balanceColor = runningBalance >= 0
+        ? CupertinoColors.label.resolveFrom(context)
+        : CupertinoColors.systemRed.resolveFrom(
+            context,
+          ); // Highlight negative balance
 
-    return CupertinoButton(
-      padding: EdgeInsets.zero,
-      onPressed: () {
-        Navigator.push(
-          context,
-          CupertinoPageRoute(
-            builder: (_) => LedgerDetailPage(entryId: entry.id),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: CupertinoColors.separator, width: 0.4),
+    return Container(
+      // Standard row height for list items
+      height: 48,
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground, // Ensure consistent background
+        border: Border(
+          bottom: BorderSide(
+            color: CupertinoColors.separator.withOpacity(
+              0.6,
+            ), // Subtle separator
+            width: 0.4,
           ),
         ),
-        child: Row(
-          children: [
-            // Date
-            Expanded(
-              flex: 2,
-              child: Text(
-                DateFormat('MMM d, yy').format(entry.date),
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: CupertinoColors.systemGrey,
+      ),
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.zero,
+        onPressed: () {
+          // Navigate to the detail screen on tap
+          Navigator.push(
+            context,
+            CupertinoPageRoute(
+              builder: (_) => LedgerDetailPage(entryId: entry.id),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16.0,
+          ), // Consistent padding
+          child: Row(
+            children: [
+              // 1. Date (Fixed width)
+              SizedBox(
+                width:
+                    MediaQuery.of(context).size.width * 0.15, // Adjusted width
+                child: Text(
+                  // Use shorter format for table row
+                  DateFormat(
+                    'MMM d',
+                  ).format(DateTime.parse(entry.date.toString())),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: CupertinoColors.systemGrey,
+                  ),
                 ),
               ),
-            ),
 
-            // Description
-            Expanded(
-              flex: 4,
-              child: Text(
-                entry.description ?? '',
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12),
-              ),
-            ),
-
-            // Debit Amount
-            Expanded(
-              flex: 2,
-              child: Text(
-                isDebit ? entry.amount.toStringAsFixed(0) : '',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: debitColor,
+              // 2. Description (Expanded)
+              Expanded(
+                child: Text(
+                  entry.description ?? '',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: CupertinoColors.label,
+                  ),
                 ),
               ),
-            ),
 
-            // Credit Amount
-            Expanded(
-              flex: 2,
-              child: Text(
-                !isDebit ? entry.amount.toStringAsFixed(0) : '',
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: creditColor,
+              const SizedBox(width: 8),
+
+              // 3. Debit Amount (Fixed width, Right aligned)
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.18,
+                child: Text(
+                  isDebit ? formatter.format(entry.amount) : '',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: debitColor,
+                  ),
                 ),
               ),
-            ),
 
-            // Running Balance
-            Expanded(
-              flex: 2,
-              child: Text(
-                runningBalance.toStringAsFixed(0),
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: balanceColor,
+              // 4. Credit Amount (Fixed width, Right aligned)
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.18,
+                child: Text(
+                  !isDebit ? formatter.format(entry.amount) : '',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: creditColor,
+                  ),
                 ),
               ),
-            ),
-          ],
+
+              // 5. Running Balance (Fixed width, Right aligned)
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.20,
+                child: Text(
+                  formatter.format(runningBalance),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: balanceColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-// class LedgerRowWidget extends StatelessWidget {
-//   final LedgerEntry entry;
-//   final double balance;
-//   final String? accountFilter;
-
-//   const LedgerRowWidget({
-//     required this.entry,
-//     required this.balance,
-//     this.accountFilter,
-//     super.key,
-//   });
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final isDebit = entry.type == 'debit';
-//     final formatter = DateFormat('MMM d, yy');
-
-//     return InkWell(
-//       onTap: () => context.push('/ledger/detail/${entry.id}'),
-//       child: Container(
-//         padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-//         decoration: BoxDecoration(
-//           border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-//         ),
-//         child: Row(
-//           children: [
-//             // DATE
-//             SizedBox(
-//               width: MediaQuery.of(context).size.width * 0.14,
-//               child: Text(
-//                 formatter.format(entry.date),
-//                 style: const TextStyle(fontSize: 10),
-//               ),
-//             ),
-
-//             // DESCRIPTION
-//             Expanded(
-//               child: Text(
-//                 entry.description ?? '',
-//                 maxLines: 2,
-//                 overflow: TextOverflow.ellipsis,
-//                 style: const TextStyle(fontSize: 11),
-//               ),
-//             ),
-
-//             // DEBIT
-//             SizedBox(
-//               width: MediaQuery.of(context).size.width * 0.15,
-//               child: Text(
-//                 isDebit ? entry.amount.toStringAsFixed(0) : '',
-//                 textAlign: TextAlign.right,
-//                 style: const TextStyle(fontSize: 11),
-//               ),
-//             ),
-
-//             // CREDIT
-//             SizedBox(
-//               width: MediaQuery.of(context).size.width * 0.15,
-//               child: Text(
-//                 !isDebit ? entry.amount.toStringAsFixed(0) : '',
-//                 textAlign: TextAlign.right,
-//                 style: const TextStyle(fontSize: 11),
-//               ),
-//             ),
-
-//             // BALANCE
-//             SizedBox(
-//               width: MediaQuery.of(context).size.width * 0.15,
-//               child: Text(
-//                 balance.toStringAsFixed(0),
-//                 textAlign: TextAlign.right,
-//                 style: const TextStyle(fontSize: 11),
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }

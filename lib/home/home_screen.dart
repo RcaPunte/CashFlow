@@ -1,4 +1,5 @@
 import 'package:cashledger/account/ui/account_list_screen.dart';
+import 'package:cashledger/cash_book/ui/cash_book_dashboard.dart';
 import 'package:cashledger/cash_book/ui/cash_book_list_screen.dart';
 import 'package:cashledger/ledger/ui/ledget_screen.dart';
 import 'package:flutter/cupertino.dart';
@@ -65,7 +66,7 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
       tabBuilder: (_, i) {
-        if (i == 0) return const CashbookScreen();
+        if (i == 0) return const CashbookDashboard(); //CashbookScreen();
         if (i == 1) return const LedgerScreen();
         return const AccountListScreen();
       },

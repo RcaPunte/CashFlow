@@ -1,8 +1,13 @@
 import 'package:cashledger/ledger/model/ledger_entry.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart'
+    show
+        CircularProgressIndicator; // Keep for the loading indicator if no Cupertino alternative is available/preferred
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
-// Your LedgerEntry model should contain: id, accountName, date, type, amount, description.
+// Assuming LedgerEntry model structure is available (id, accountName, date, type, amount, description).
+
 class LedgerDetailPage extends StatefulWidget {
   final String entryId;
   const LedgerDetailPage({required this.entryId, super.key});
@@ -24,144 +29,158 @@ class _LedgerDetailPageState extends State<LedgerDetailPage> {
   Future<void> _load() async {
     final supabase = Supabase.instance.client;
 
-    final res = await supabase
-        .from('entries')
-        .select('account_id, *, accounts(name)')
-        .eq('id', widget.entryId)
-        .maybeSingle();
+    try {
+      final res = await supabase
+          .from('entries')
+          .select('account_id, *, accounts(name)')
+          .eq('id', widget.entryId)
+          .maybeSingle();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      if (res != null) {
-        entry = LedgerEntry.fromMap(Map<String, dynamic>.from(res));
+      setState(() {
+        if (res != null) {
+          entry = LedgerEntry.fromMap(Map<String, dynamic>.from(res));
+        }
+        loading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => loading = false);
+        // Optional: show a CupertinoAlertDialog on error
       }
-      loading = false;
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     if (loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const CupertinoPageScaffold(
+        child: Center(child: CupertinoActivityIndicator(radius: 18)),
+      );
     }
 
     if (entry == null) {
-      return Scaffold(
-        body: Center(
+      return CupertinoPageScaffold(
+        navigationBar: const CupertinoNavigationBar(middle: Text('Detail')),
+        child: Center(
           child: Text(
             'Ledger entry not found',
-            style: theme.textTheme.titleMedium,
+            style: TextStyle(color: CupertinoColors.systemGrey),
           ),
         ),
       );
     }
 
     final isDebit = entry!.type == 'debit';
-    final amountColor = isDebit ? Colors.green[700] : Colors.red[700];
-    final cardColor = theme.colorScheme.surface;
-    final shadowColor = Colors.black.withOpacity(0.08);
+    final amountColor = isDebit
+        ? CupertinoColors.activeGreen.resolveFrom(context)
+        : CupertinoColors.systemRed.resolveFrom(context);
+    final dateFormatter = DateFormat('EEE, MMM d, yyyy');
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Ledger Detail"),
-        elevation: 1,
-        backgroundColor: theme.colorScheme.primary,
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text("Entry Detail"),
+        // Add a trailing button for editing or other actions
+        trailing: Icon(CupertinoIcons.ellipsis_circle),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: 12,
-                offset: const Offset(0, 3),
-                color: shadowColor,
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(20),
+      // Use systemGroupedBackground for the standard iOS detail page background
+      backgroundColor: CupertinoColors.systemGroupedBackground,
+      child: SafeArea(
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ACCOUNT NAME
-              Text(
-                entry!.accountName ?? "Unknown Account",
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+              // 1. Amount and Type Summary (Header Area)
+              Padding(
+                padding: const EdgeInsets.only(top: 24, bottom: 20, left: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isDebit ? "Receipt (Debit)" : "Expense (Credit)",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: amountColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "₹${NumberFormat('#,##0.00').format(entry!.amount)}",
+                      style: TextStyle(
+                        fontSize: 38,
+                        fontWeight: FontWeight.bold,
+                        color: amountColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 10),
 
-              // DATE
-              Row(
+              // 2. Main Details Section (Grouped List)
+              CupertinoListSection.insetGrouped(
+                header: const Text('TRANSACTION DETAILS'),
                 children: [
-                  const Icon(Icons.calendar_today, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    entry!.date.toIso8601String().split('T')[0],
-                    style: theme.textTheme.bodyLarge,
+                  // Account Name
+                  CupertinoListTile(
+                    title: const Text('Account'),
+                    leading: const Icon(CupertinoIcons.bag_fill),
+                    trailing: Text(
+                      entry!.accountName ?? "Unknown",
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+
+                  // Date
+                  CupertinoListTile(
+                    title: const Text('Date'),
+                    leading: const Icon(CupertinoIcons.calendar),
+                    trailing: Text(
+                      dateFormatter.format(
+                        DateTime.parse(entry!.date.toString()),
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+
+                  // ID (Optional for reference)
+                  CupertinoListTile(
+                    title: const Text('Entry ID'),
+                    leading: const Icon(CupertinoIcons.number),
+                    trailing: Text(
+                      entry!.id,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 20),
-
-              // TYPE
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isDebit
-                      ? Colors.green.withOpacity(0.15)
-                      : Colors.red.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isDebit ? "Receipt (Debit)" : "Expense (Credit)",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: amountColor,
-                    fontWeight: FontWeight.bold,
+              // 3. Description Section (Grouped List)
+              CupertinoListSection.insetGrouped(
+                header: const Text('DESCRIPTION'),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    child: Text(
+                      entry!.description?.trim().isEmpty == true
+                          ? "No description provided."
+                          : entry!.description!,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: CupertinoColors.label,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-
-              const SizedBox(height: 20),
-
-              // AMOUNT
-              Text(
-                "₹${entry!.amount.toStringAsFixed(2)}",
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: amountColor,
-                ),
-              ),
-
-              const Divider(height: 32),
-
-              // DESCRIPTION
-              Text(
-                "Description",
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                entry!.description?.trim().isEmpty == true
-                    ? "No description"
-                    : entry!.description!,
-                style: theme.textTheme.bodyLarge,
-              ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 30),
             ],
           ),
         ),
@@ -169,35 +188,3 @@ class _LedgerDetailPageState extends State<LedgerDetailPage> {
     );
   }
 }
-
-// --------------------------------------------------
-// Example LedgerEntry model
-// --------------------------------------------------
-// class LedgerEntry {
-//   final String id;
-//   final String accountName;
-//   final DateTime date;
-//   final String type;
-//   final double amount;
-//   final String? description;
-
-//   LedgerEntry({
-//     required this.id,
-//     required this.accountName,
-//     required this.date,
-//     required this.type,
-//     required this.amount,
-//     this.description,
-//   });
-
-//   factory LedgerEntry.fromMap(Map<String, dynamic> map) {
-//     return LedgerEntry(
-//       id: map['id'].toString(),
-//       accountName: map['accounts']['name'] ?? 'Unknown',
-//       date: DateTime.parse(map['date']),
-//       type: map['type'],
-//       amount: double.tryParse(map['amount'].toString()) ?? 0,
-//       description: map['description'],
-//     );
-//   }
-// }
