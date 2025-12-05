@@ -10,6 +10,9 @@ import 'package:intl/intl.dart';
 import 'package:cashledger/cash_book/by_month/controller/monthly_summary_provider.dart';
 import 'package:cashledger/cash_book/by_month/model/monthly_cash_summary.dart';
 
+// Define a common breakpoint for responsiveness
+const double kTabletBreakpoint = 800.0;
+
 class CashbookDashboard extends ConsumerStatefulWidget {
   const CashbookDashboard({super.key});
 
@@ -43,11 +46,24 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
     final currentYear = DateTime.now().year;
     final annualChartAsync = ref.watch(annualChartProvider(currentYear));
 
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text("Cash Book"), // Simplified Title
+    // Check for wide screen
+    final isWideScreen = MediaQuery.of(context).size.width >= kTabletBreakpoint;
+
+    // Components to be passed to the adaptive layout
+    final summaryCard = _DashboardSummaryCard(summaryList: summaryList);
+    final annualChart = SizedBox(
+      height: 250, // Fixed height for chart area
+      child: annualChartAsync.when(
+        loading: () => const Center(child: CupertinoActivityIndicator()),
+        error: (e, _) => Center(child: Text("Error loading chart: $e")),
+        data: (data) => AnnualBarLineChart(data: data),
       ),
-      // Use CustomScrollView for a native scroll experience
+    );
+
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(middle: Text("Cash Book")),
+      // Use systemGroupedBackground for the standard iOS/macOS look
+      backgroundColor: CupertinoColors.systemGroupedBackground,
       child: CustomScrollView(
         slivers: [
           // Header Spacer
@@ -56,7 +72,10 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
           // Current Year Header
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: EdgeInsets.symmetric(
+                horizontal: isWideScreen ? 30 : 20,
+                vertical: 8,
+              ),
               child: Text(
                 "$currentYear Overall Summary",
                 style: const TextStyle(
@@ -68,32 +87,39 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
             ),
           ),
 
-          // Total Summary Card (Calculates totals and displays)
-          SliverToBoxAdapter(
-            child: _DashboardSummaryCard(summaryList: summaryList),
-          ),
-
-          // Annual Chart
+          // Adaptive Summary and Chart Layout
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(top: 20, bottom: 20),
-              child: annualChartAsync.when(
-                loading: () =>
-                    const Center(child: CupertinoActivityIndicator()),
-                error: (e, _) => Center(child: Text("Error loading chart: $e")),
-                data: (data) {
-                  return SizedBox(
-                    height: 250,
-                    child: AnnualBarLineChart(data: data),
-                  );
-                },
+              // Adjust padding for wider screens
+              padding: EdgeInsets.symmetric(
+                horizontal: isWideScreen ? 30 : 16,
+                vertical: 8,
               ),
+              child: isWideScreen
+                  ? _WideLayout(
+                      summaryCard: summaryCard,
+                      annualChart: annualChart,
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Phone/Narrow Layout: Summary Card then Chart
+                        summaryCard,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 20, bottom: 20),
+                          child: annualChart,
+                        ),
+                      ],
+                    ),
             ),
           ),
 
           // Quick Actions Section (Standard iOS Grouped List)
-          SliverList(
-            delegate: SliverChildListDelegate([_buildQuickActions(context)]),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: isWideScreen ? 14 : 0),
+              child: _buildQuickActions(context),
+            ),
           ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 30)),
@@ -103,7 +129,7 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
   }
 
   // ------------------------------------------------------------
-  // Quick Actions Section (Updated to use CupertinoListSection)
+  // Quick Actions Section
   // ------------------------------------------------------------
   Widget _buildQuickActions(BuildContext context) {
     return CupertinoListSection.insetGrouped(
@@ -120,11 +146,9 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
             color: CupertinoColors.activeGreen,
           ),
           trailing: const Icon(
-            CupertinoIcons
-                .chevron_right, // ✅ Correct way to add the trailing arrow
-            size: 18, // Adjusted size for a standard look
-            color: CupertinoColors
-                .systemGrey, // iOS uses a subdued gray for trailing arrows
+            CupertinoIcons.chevron_right,
+            size: 18,
+            color: CupertinoColors.systemGrey,
           ),
           onTap: () {
             Navigator.push(
@@ -142,11 +166,9 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
             color: CupertinoColors.systemBlue,
           ),
           trailing: const Icon(
-            CupertinoIcons
-                .chevron_right, // ✅ Correct way to add the trailing arrow
-            size: 18, // Adjusted size for a standard look
-            color: CupertinoColors
-                .systemGrey, // iOS uses a subdued gray for trailing arrows
+            CupertinoIcons.chevron_right,
+            size: 18,
+            color: CupertinoColors.systemGrey,
           ),
           onTap: () {
             Navigator.push(
@@ -164,11 +186,9 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
             color: CupertinoColors.systemOrange,
           ),
           trailing: const Icon(
-            CupertinoIcons
-                .chevron_right, // ✅ Correct way to add the trailing arrow
-            size: 18, // Adjusted size for a standard look
-            color: CupertinoColors
-                .systemGrey, // iOS uses a subdued gray for trailing arrows
+            CupertinoIcons.chevron_right,
+            size: 18,
+            color: CupertinoColors.systemGrey,
           ),
           onTap: () {
             Navigator.push(
@@ -185,17 +205,71 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
 }
 
 // ------------------------------------------------------------
-// Refactored Summary Card (Replaces _buildTotalSummary)
+// Wide Layout Widget (For desktop/tablet landscape)
+// ------------------------------------------------------------
+class _WideLayout extends StatelessWidget {
+  final Widget summaryCard;
+  final Widget annualChart;
+
+  const _WideLayout({required this.summaryCard, required this.annualChart});
+
+  @override
+  Widget build(BuildContext context) {
+    // Lay out Summary Card (smaller) and Chart (larger) side-by-side
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Summary Card: Takes up roughly 1/3 of the width
+        SizedBox(
+          width:
+              MediaQuery.of(context).size.width * 0.35 -
+              30, // 35% minus padding
+          child: summaryCard,
+        ),
+        const SizedBox(width: 20),
+
+        // Annual Chart: Takes up the remaining space
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 20),
+            child: annualChart,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------------------
+// Refactored Summary Card
 // ------------------------------------------------------------
 class _DashboardSummaryCard extends StatelessWidget {
   final List<AsyncValue<MonthlyCashSummary>> summaryList;
 
   const _DashboardSummaryCard({required this.summaryList});
+  // The method must now accept BuildContext as a parameter
+  Widget _summaryRow(
+    BuildContext context,
+    String title,
+    double value, {
+    Color? color,
+  }) {
+    // Check if the provided 'color' is a CupertinoDynamicColor instance.
+    // If it is, use it; otherwise, use the default logic.
+    final Color? providedColor = color;
 
-  Widget _summaryRow(String title, double value, {Color? color}) {
-    final effectiveColor =
-        color ??
-        (value >= 0 ? CupertinoColors.label : CupertinoColors.systemRed);
+    final Color effectiveColor;
+
+    if (providedColor is CupertinoDynamicColor) {
+      effectiveColor = providedColor.resolveFrom(context);
+    } else {
+      // Fallback or default color logic, resolved using context
+      effectiveColor = value >= 0
+          ? CupertinoColors.label.resolveFrom(context)
+          : CupertinoColors.systemRed.resolveFrom(context);
+    }
+
+    final valueFormatter = NumberFormat('#,##0.00', 'en_US');
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -204,13 +278,14 @@ class _DashboardSummaryCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
-              color: CupertinoColors.secondaryLabel,
+              // 'context' is now available here
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
             ),
           ),
           Text(
-            "₹${value.toStringAsFixed(2)}",
+            "₹${valueFormatter.format(value)}",
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 16,
@@ -221,6 +296,40 @@ class _DashboardSummaryCard extends StatelessWidget {
       ),
     );
   }
+  // Widget _summaryRow(String title, double value, {Color? color}) {
+  //   // Resolve colors dynamically
+  //   final effectiveColor =
+  //       color?.resolveFrom(context) ??
+  //       (value >= 0
+  //           ? CupertinoColors.label.resolveFrom(context)
+  //           : CupertinoColors.systemRed.resolveFrom(context));
+
+  //   final valueFormatter = NumberFormat('#,##0.00', 'en_US');
+
+  //   return Padding(
+  //     padding: const EdgeInsets.symmetric(vertical: 4),
+  //     child: Row(
+  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //       children: [
+  //         Text(
+  //           title,
+  //           style: TextStyle(
+  //             fontSize: 15,
+  //             color: CupertinoColors.secondaryLabel.resolveFrom(context),
+  //           ),
+  //         ),
+  //         Text(
+  //           "₹${valueFormatter.format(value)}",
+  //           style: TextStyle(
+  //             fontWeight: FontWeight.w700,
+  //             fontSize: 16,
+  //             color: effectiveColor,
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -236,45 +345,58 @@ class _DashboardSummaryCard extends StatelessWidget {
 
     final balance = totalReceipts - totalExpenses;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: CupertinoColors.systemBackground,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: CupertinoColors.systemGrey.withOpacity(0.15),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _summaryRow(
-              "Total Receipts",
-              totalReceipts,
-              color: CupertinoColors.activeGreen,
-            ),
-            const Divider(height: 10, color: CupertinoColors.separator),
-            _summaryRow(
-              "Total Expenses",
-              totalExpenses,
-              color: CupertinoColors.systemRed,
-            ),
-            const Divider(height: 10, color: CupertinoColors.separator),
-            _summaryRow(
-              "Net Balance",
-              balance,
-              color: balance >= 0
-                  ? CupertinoColors.activeBlue
-                  : CupertinoColors.systemRed,
-            ),
-          ],
-        ),
+    // Resolve colors for the container background
+    final cardBackgroundColor = CupertinoColors.systemBackground.resolveFrom(
+      context,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: CupertinoColors.systemGrey
+                .resolveFrom(context)
+                .withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _summaryRow(
+            context,
+            "Total Receipts",
+            totalReceipts,
+            color: CupertinoColors.activeGreen,
+          ),
+          Divider(
+            height: 10,
+            color: CupertinoColors.separator.resolveFrom(context),
+          ),
+          _summaryRow(
+            context,
+            "Total Expenses",
+            totalExpenses,
+            color: CupertinoColors.systemRed,
+          ),
+          Divider(
+            height: 10,
+            color: CupertinoColors.separator.resolveFrom(context),
+          ),
+          _summaryRow(
+            context,
+            "Net Balance",
+            balance,
+            color: balance >= 0
+                ? CupertinoColors.activeBlue
+                : CupertinoColors.systemRed,
+          ),
+        ],
       ),
     );
   }

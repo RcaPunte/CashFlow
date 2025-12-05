@@ -63,7 +63,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
     showCupertinoModalPopup(
       context: context,
       builder: (_) => Container(
-        height: 280, // Slightly taller container
+        height: 320, // Slightly taller container
         color: CupertinoColors.systemBackground.resolveFrom(context),
         child: Column(
           children: [
@@ -410,7 +410,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
 
                       try {
                         final entryData = {
-                          'date': date.toIso8601String(),
+                          'date': date,
                           'amount': amount,
                           'type': type == 'receipt'
                               ? 'debit'
@@ -424,7 +424,15 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         } else {
                           await entriesNotifier.updateEntry(
                             widget.entry!['id'],
-                            entryData,
+                            {
+                              'date': date.toIso8601String(),
+                              'amount': amount,
+                              'type': type == 'receipt'
+                                  ? 'debit'
+                                  : 'credit', // Map back to DB type
+                              'description': descCtrl.text.trim(),
+                              'account_id': selectedAccountId!,
+                            },
                           );
                         }
 

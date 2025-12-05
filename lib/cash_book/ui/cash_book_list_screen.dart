@@ -66,7 +66,7 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
         slivers: [
           // 2. Summary Card in a SliverToBoxAdapter for smoother scrolling
           SliverToBoxAdapter(
-            child: _CashbookSummaryCard(
+            child: CashbookSummaryCard(
               totalReceipts: totalReceipts,
               totalExpenses: totalExpenses,
               balance: balance,
@@ -285,12 +285,13 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
 
 // --- New/Updated Components ---
 
-class _CashbookSummaryCard extends StatelessWidget {
+class CashbookSummaryCard extends StatelessWidget {
   final double totalReceipts;
   final double totalExpenses;
   final double balance;
 
-  const _CashbookSummaryCard({
+  const CashbookSummaryCard({
+    super.key,
     required this.totalReceipts,
     required this.totalExpenses,
     required this.balance,

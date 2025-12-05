@@ -61,6 +61,8 @@ class EntriesRepository {
       //     ],
       //   ),
       // );
+    } catch (e) {
+      log(e.toString());
     }
   }
 

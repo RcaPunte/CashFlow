@@ -98,7 +98,7 @@ class EntriesNotifier
       amount: data['amount'],
       type: data['type'],
       description: data['description'],
-      accountId: data['accountId'],
+      accountId: data['account_id'],
     );
     await fetchEntries();
   }
