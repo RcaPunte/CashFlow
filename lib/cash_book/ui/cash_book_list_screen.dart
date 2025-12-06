@@ -1,16 +1,10 @@
-import 'dart:collection';
-import 'package:cashledger/cash_book/by_month/ui/cash_book_monthly_view.dart';
-import 'package:cashledger/cash_book/by_month/ui/monthly_report_screen.dart';
 import 'package:cashledger/cash_book/controller/cash_book_controller.dart';
 import 'package:cashledger/cash_book/controller/cash_book_filter.dart';
 import 'package:cashledger/cash_book/controller/cash_book_group_provider.dart';
-import 'package:cashledger/ledger/ui/monthly_ledger_list_screen.dart';
+import 'package:cashledger/export/export_utility.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:csv/csv.dart';
-import 'package:share_plus/share_plus.dart';
-
 import 'cash_book_add_edit_screen.dart';
 
 // --- Widget Updates ---
@@ -33,6 +27,8 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
     return monthHeaderFormat.format(DateTime(y, m));
   }
 
+  //final ScreenshotController screenshotController = ScreenshotController();
+
   @override
   Widget build(BuildContext context) {
     // Data fetching logic remains the same
@@ -53,13 +49,29 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
       // 1. NavigationBar is correct, but use `CupertinoIcons.add_circled_solid` for prominence
       navigationBar: CupertinoNavigationBar(
         middle: const Text('Cashbook'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.add_circled_solid, size: 24),
-          onPressed: () => Navigator.push(
-            context,
-            CupertinoPageRoute(builder: (_) => const AddEntryScreen()),
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // CupertinoButton(
+            //   padding: EdgeInsets.zero,
+            //   child: const Icon(CupertinoIcons.square_arrow_up, size: 24),
+            //   onPressed: () => ExportUtils.openCashBookExportSheet(
+            //     context: context,
+            //     entries: entries,
+            //     totalReceipts: totalReceipts,
+            //     totalExpenses: totalExpenses,
+            //     //screenshotController: screenshotController,
+            //   ),
+            // ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.add_circled_solid, size: 24),
+              onPressed: () => Navigator.push(
+                context,
+                CupertinoPageRoute(builder: (_) => const AddEntryScreen()),
+              ),
+            ),
+          ],
         ),
       ),
       child: CustomScrollView(
@@ -85,6 +97,7 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
                 totals: totals[section.key]!,
                 height: 40, // Slightly reduced header height for compactness
                 monthLabel: _monthLabelFromKey(section.key),
+                entries: section.value,
               ),
             ),
 
@@ -92,7 +105,8 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
             SliverList(
               delegate: SliverChildListDelegate([
                 CupertinoListSection(
-                  // Set background color to systemBackground for contrast with the header
+                  // Set background color
+                  //to systemBackground for contrast with the header
                   backgroundColor: CupertinoColors.systemGroupedBackground,
                   children: [
                     for (final e in section.value)
@@ -355,19 +369,43 @@ class CashbookSummaryCard extends StatelessWidget {
   }
 }
 
-// Sticky header delegate (minor change to color and height)
+// Assuming ExportUtils is available elsewhere
+// class ExportUtils {
+//   static void openDirectExport({
+//     required BuildContext context,
+//     required List<Map<String, dynamic>> entries,
+//   }) {}
+// import 'package:flutter/cupertino.dart';
+
+// Assuming ExportUtils is defined elsewhere in your project
+// class ExportUtils {
+//   static void openDirectExport({
+//     required BuildContext context,
+//     required List<Map<String, dynamic>> entries,
+//   }) {}
+// }
+
 class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String monthKey;
   final Map<String, double> totals;
   final double height;
   final String monthLabel;
+  final List<Map<String, dynamic>> entries;
 
   _MonthHeaderDelegate({
     required this.monthKey,
     required this.totals,
     required this.height,
     required this.monthLabel,
+    required this.entries,
   });
+
+  // Use a shared currency formatter with ZERO decimal places for compactness
+  final NumberFormat _compactFormatter = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: '₹',
+    decimalDigits: 0,
+  );
 
   @override
   Widget build(
@@ -375,47 +413,146 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    // Safely extract totals
+    final openingBalance = totals['openingBalance'] ?? 0.0;
+    final receipts = totals['receipts'] ?? 0.0;
+    final expenses = totals['expenses'] ?? 0.0;
+    final balance = totals['balance'] ?? 0.0;
+    //Date
+    String fullDateString = "$monthKey-01";
+
+    DateTime dateTimeObject = DateTime.parse(fullDateString);
+    final dateFormat = DateFormat('MMM yyy').format(dateTimeObject);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      // Use systemGroupedBackground to match the section background
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 10),
       color: CupertinoColors.systemGroupedBackground,
-      alignment: Alignment.centerLeft,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(
-            child: Text(
-              monthLabel,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-          ),
+          // 1. Month Label and Opening Balance (Left Column)
           Text(
-            'R: ₹${totals['receipts']!.toStringAsFixed(2)}',
+            dateFormat.toString(),
+
             style: const TextStyle(
-              color: CupertinoColors.activeGreen,
-              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: CupertinoColors.activeBlue,
             ),
           ),
-          const SizedBox(width: 10),
-          Text(
-            'E: ₹${totals['expenses']!.toStringAsFixed(2)}',
-            style: const TextStyle(
-              color: CupertinoColors.destructiveRed,
-              fontSize: 12,
-            ),
+          Spacer(),
+          // 2. Compact Summary Stats (Middle Group)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                // color: CupertinoColors.activeGreen,
+                width: 90,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCompactSummaryItem(
+                      label: 'Open',
+                      amount: openingBalance,
+                      color: CupertinoColors.secondaryLabel,
+                      formatter: _compactFormatter,
+                      // isBold: true,
+                    ),
+                    SizedBox(height: 2),
+                    _buildCompactSummaryItem(
+                      label: 'Close',
+                      amount: balance,
+                      color: CupertinoColors.label,
+                      formatter: _compactFormatter,
+                      //  isBold: true,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+              SizedBox(
+                //color: CupertinoColors.activeGreen,
+                width: 110,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCompactSummaryItem(
+                      label: 'Receipts',
+                      amount: receipts,
+                      color: CupertinoColors.systemGreen,
+                      formatter: _compactFormatter,
+                      // isBold: true,
+                    ),
+                    SizedBox(height: 2),
+                    _buildCompactSummaryItem(
+                      label: 'Expenses',
+                      amount: expenses,
+                      color: CupertinoColors.systemRed,
+                      formatter: _compactFormatter,
+                      //  isBold: true,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+
           const SizedBox(width: 10),
-          Text(
-            'B: ₹${totals['balance']!.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+
+          // 3. Export Button (Far Right)
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () => ExportUtils.openDirectExport(
+              context: context,
+              entries: entries,
+              openingBl: openingBalance,
+            ),
+            child: const Icon(CupertinoIcons.square_arrow_up, size: 22),
           ),
         ],
       ),
     );
   }
 
+  // Helper widget for compact display
+  Widget _buildCompactSummaryItem({
+    required String label,
+    required double amount,
+    required Color color,
+    required NumberFormat formatter,
+    bool isBold = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          // The labels R, E, Bal are very short, maximizing space for the amount
+          '$label : ',
+          style: TextStyle(
+            color: color,
+            fontSize: isBold ? 12 : 11,
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+          ),
+          textAlign: TextAlign.right,
+          overflow: TextOverflow.ellipsis,
+        ),
+        Text(
+          // The labels R, E, Bal are very short, maximizing space for the amount
+          formatter.format(amount),
+          style: TextStyle(
+            color: color,
+            fontSize: isBold ? 12 : 11,
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+          ),
+          textAlign: TextAlign.right,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
   @override
   double get maxExtent => height;
-
   @override
   double get minExtent => height;
 
