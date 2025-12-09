@@ -44,6 +44,9 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
         .where((e) => e['type'] == 'credit')
         .fold(0.0, (s, e) => s + (e['amount'] ?? 0).toDouble());
     final balance = totalReceipts - totalExpenses;
+    refesh() {
+      ref.refresh(entriesProvider);
+    }
 
     return CupertinoPageScaffold(
       // 1. NavigationBar is correct, but use `CupertinoIcons.add_circled_solid` for prominence
@@ -63,6 +66,11 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
             //     //screenshotController: screenshotController,
             //   ),
             // ),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              child: const Icon(CupertinoIcons.refresh, size: 24),
+              onPressed: () => refesh(),
+            ),
             CupertinoButton(
               padding: EdgeInsets.zero,
               child: const Icon(CupertinoIcons.add_circled_solid, size: 24),

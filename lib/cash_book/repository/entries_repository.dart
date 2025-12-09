@@ -35,13 +35,13 @@ class EntriesRepository {
     // if (user == null) return;
 
     try {
-      final dbType = type == "receipt" ? "debit" : "credit";
+      // final dbType = type == "receipt" ? "debit" : "credit";
 
       await supabase.from('entries').insert({
         // 'user_id': user.id,
         'date': date.toIso8601String(),
         'amount': amount,
-        'type': dbType,
+        'type': type,
         'description': description,
         'account_id': accountId,
       });
@@ -67,10 +67,14 @@ class EntriesRepository {
   }
 
   Future<void> updateEntry(String id, Map<String, dynamic> data) async {
-    if (data.containsKey('type')) {
-      data['type'] = data['type'] == "receipt" ? "debit" : "credit";
+    try {
+      // if (data.containsKey('type')) {
+      //   data['type'] = data['type'] == "receipt" ? "debit" : "credit";
+      // }
+      await supabase.from('entries').update(data).eq('id', id);
+    } catch (e) {
+      throw Exception(e);
     }
-    await supabase.from('entries').update(data).eq('id', id);
   }
 
   Future<void> deleteEntry(String id) async {

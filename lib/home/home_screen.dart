@@ -1,4 +1,5 @@
 import 'package:cashledger/account/ui/account_list_screen.dart';
+import 'package:cashledger/auth/ui/auth_gate.dart';
 import 'package:cashledger/cash_book/ui/cash_book_dashboard.dart';
 import 'package:cashledger/cash_book/ui/cash_book_list_screen.dart';
 import 'package:cashledger/ledger/ui/ledget_screen.dart';

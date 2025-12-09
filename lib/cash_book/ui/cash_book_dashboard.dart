@@ -61,8 +61,17 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
     );
 
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(middle: Text("Cash Book")),
-      // Use systemGroupedBackground for the standard iOS/macOS look
+      navigationBar: CupertinoNavigationBar(
+        middle: Text("Cash Book"),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            ref.refresh(annualChartProvider(currentYear));
+          },
+          child: const Icon(CupertinoIcons.refresh, size: 22),
+        ),
+      ),
+
       backgroundColor: CupertinoColors.systemGroupedBackground,
       child: CustomScrollView(
         slivers: [

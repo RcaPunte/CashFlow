@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
+import 'dart:html' as html;
 
 class ExportUtils {
   static Future<void> openDirectExport({
@@ -33,11 +35,19 @@ class ExportUtils {
           ),
           CupertinoActionSheetAction(
             onPressed: () {
-              ExportUtils().generateCashbookPdf(
-                entries: entries,
-                monthLabel: monthLabel,
-                openingBl: openingBl,
-              );
+              if (kIsWeb) {
+                ExportUtils().generateCashbookPdfWeb(
+                  entries: entries,
+                  monthLabel: monthLabel,
+                  openingBl: openingBl,
+                );
+              } else {
+                ExportUtils().generateCashbookPdf(
+                  entries: entries,
+                  monthLabel: monthLabel,
+                  openingBl: openingBl,
+                );
+              }
               Navigator.pop(context);
             },
             child: const Text('📄 Export as PDF'),
@@ -360,6 +370,151 @@ class ExportUtils {
     // await Share.shareXFiles([XFile(file.path)], text: 'Cashbook $monthLabel');
   }
 
+  Future<void> generateCashbookPdfWeb({
+    required List<Map<String, dynamic>> entries,
+    required String monthLabel,
+    required double openingBl,
+  }) async {
+    final pdf = pw.Document();
+
+    double totalReceipts = 0;
+    double totalExpenses = 0;
+
+    for (var e in entries) {
+      if (e['type'] == "debit") {
+        totalReceipts += (e['amount'] ?? 0).toDouble();
+      } else if (e['type'] == "credit") {
+        totalExpenses += (e['amount'] ?? 0).toDouble();
+      }
+    }
+
+    final closingBalance = (openingBl + totalReceipts) - totalExpenses;
+
+    final textStyle = pw.TextStyle(
+      fontSize: 10,
+      fontWeight: pw.FontWeight.bold,
+    );
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (context) => [
+          pw.Header(
+            level: 0,
+            child: pw.Text(
+              "Kanan Corps SAY Cash Book Report - $monthLabel",
+              style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(height: 10),
+          pw.Row(
+            children: [
+              pw.Text("Opening Balance : $openingBl", style: textStyle),
+              pw.Spacer(),
+              pw.Text("Total Income : $totalReceipts", style: textStyle),
+              pw.Spacer(),
+              pw.Text("Total Expenses : $totalExpenses", style: textStyle),
+              pw.Spacer(),
+              pw.Text("Closing Balance : $closingBalance", style: textStyle),
+            ],
+          ),
+          pw.SizedBox(height: 6),
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey400),
+            columnWidths: {
+              0: const pw.FixedColumnWidth(80),
+              1: const pw.FlexColumnWidth(3),
+              2: const pw.FixedColumnWidth(70),
+              3: const pw.FixedColumnWidth(70),
+            },
+            children: [
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.blueAccent),
+                children: [
+                  _headerCell("Date", alignment: pw.Alignment.center),
+                  _headerCell(
+                    "Description",
+                    alignment: pw.Alignment.centerLeft,
+                  ),
+                  _headerCell("Receipts", alignment: pw.Alignment.centerRight),
+                  _headerCell("Expenses", alignment: pw.Alignment.centerRight),
+                ],
+              ),
+              ...entries.map((e) {
+                final isDebit = e['type'] == "debit";
+                final isCredit = e['type'] == "credit";
+                return pw.TableRow(
+                  children: [
+                    _cell(
+                      DateFormat(
+                        'dd MMM yyyy',
+                      ).format(DateTime.parse(e['date'])),
+                      alignment: pw.Alignment.center,
+                    ),
+                    _cell(
+                      e['description'] ?? '',
+                      alignment: pw.Alignment.centerLeft,
+                    ),
+                    _cell(
+                      isDebit ? e['amount'].toStringAsFixed(2) : "",
+                      alignment: pw.Alignment.centerRight,
+                      color: PdfColors.green900,
+                    ),
+                    _cell(
+                      isCredit ? e['amount'].toStringAsFixed(2) : "",
+                      alignment: pw.Alignment.centerRight,
+                      color: PdfColors.red900,
+                    ),
+                  ],
+                );
+              }),
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                children: [
+                  _cell(""),
+                  _cell("Total", bold: true, alignment: pw.Alignment.center),
+                  _cell(
+                    totalReceipts.toStringAsFixed(2),
+                    alignment: pw.Alignment.centerRight,
+                    bold: true,
+                    color: PdfColors.green800,
+                  ),
+                  _cell(
+                    totalExpenses.toStringAsFixed(2),
+                    alignment: pw.Alignment.centerRight,
+                    bold: true,
+                    color: PdfColors.red800,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          pw.Align(
+            alignment: pw.Alignment.bottomRight,
+            child: pw.Text(
+              "Generated At ${DateFormat('yyyy-MM-dd hh:mm:ss').format(DateTime.now())}",
+              style: pw.TextStyle(fontSize: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // 📌 WEB DOWNLOAD — Important Part
+    final bytes = await pdf.save();
+
+    final blob = html.Blob([bytes], 'application/pdf');
+    final url = html.Url.createObjectUrlFromBlob(blob);
+
+    final anchor = html.AnchorElement(href: url)
+      ..download = "Cashbook_Report_$monthLabel.pdf"
+      ..click();
+
+    html.Url.revokeObjectUrl(url); // Cleanup
+  }
+
   Future<void> generateCashbookPdf({
     required List<Map<String, dynamic>> entries,
     required String monthLabel,
@@ -480,21 +635,6 @@ class ExportUtils {
                   ),
                 ],
               ),
-
-              // pw.TableRow(
-              //   decoration: const pw.BoxDecoration(color: PdfColors.grey300),
-              //   children: [
-              //     _cell("Balance", alignment: pw.Alignment.centerLeft),
-              //     _cell("", alignment: pw.Alignment.centerLeft),
-              //     _cell("", alignment: pw.Alignment.centerRight),
-              //     _cell(
-              //       balance.toStringAsFixed(2),
-              //       alignment: pw.Alignment.centerRight,
-              //       color: balance >= 0 ? PdfColors.green900 : PdfColors.red900,
-              //       bold: true,
-              //     ),
-              //   ],
-              // ),
             ],
           ),
           pw.SizedBox(height: 10),

@@ -516,14 +516,6 @@ import 'package:intl/intl.dart';
 // }
 // lib/ledger/ui/ledger_screen.dart
 
-import 'package:cashledger/account/model/account_model.dart';
-import 'package:cashledger/ledger/controller/ledget_controller.dart';
-import 'package:cashledger/ledger/model/ledger_entry.dart';
-import 'package:cashledger/ledger/ui/widgets/ledger_row.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-
 class LedgerScreen extends ConsumerStatefulWidget {
   const LedgerScreen({super.key});
 
@@ -561,7 +553,7 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
   Widget build(BuildContext context) {
     final ledgerAsync = ref.watch(ledgerControllerProvider);
     final accountsAsync = ref.watch(accountListProvider);
-
+    final scrollController = ScrollController();
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         //  largeTitle: true,
@@ -657,7 +649,9 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             double runningBalance = openingBalance;
 
             return CupertinoScrollbar(
+              controller: scrollController,
               child: CustomScrollView(
+                controller: scrollController,
                 slivers: [
                   // Filter Bar
                   SliverToBoxAdapter(child: _buildFilterBar(accountsAsync)),

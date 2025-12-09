@@ -1,6 +1,4 @@
-import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:cashledger/app/supabase_init.dart';
 import 'package:cashledger/cash_book/controller/cash_book_filter.dart';
 import 'package:cashledger/cash_book/repository/entries_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -93,6 +91,7 @@ class EntriesNotifier
   }
 
   Future<void> addEntry(Map<String, dynamic> data) async {
+    // print(data['type'].toString());
     await _repo.addEntry(
       date: data['date'],
       amount: data['amount'],

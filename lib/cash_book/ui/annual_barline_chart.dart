@@ -21,12 +21,14 @@ class AnnualBarLineChart extends StatelessWidget {
         color: CupertinoColors.systemGrey5,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Stack(
-        children: [
-          BarChart(_barData),
-          // IgnorePointer(child: LineChart(_lineData)),
-        ],
-      ),
+      child: BarChart(_barData),
+
+      // Stack(
+      //   children: [
+      //     BarChart(_barData),
+      //     // IgnorePointer(child: LineChart(_lineData)),
+      //   ],
+      // ),
     );
   }
 
@@ -64,7 +66,7 @@ class AnnualBarLineChart extends StatelessWidget {
           },
         ),
       ),
-      // leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+      //leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
@@ -83,23 +85,23 @@ class AnnualBarLineChart extends StatelessWidget {
   );
 
   /// LINE
-  LineChartData get _lineData => LineChartData(
-    borderData: FlBorderData(show: false),
-    gridData: const FlGridData(show: false),
-    titlesData: const FlTitlesData(show: false),
-    lineBarsData: [
-      LineChartBarData(
-        isCurved: true,
-        color: Colors.orange,
-        barWidth: 3,
-        dotData: const FlDotData(show: true),
-        spots: [
-          for (int i = 0; i < data.length; i++)
-            FlSpot(i.toDouble(), data[i].closingBalance),
-        ],
-      ),
-    ],
-  );
+  // LineChartData get _lineData => LineChartData(
+  //   borderData: FlBorderData(show: false),
+  //   gridData: const FlGridData(show: false),
+  //   titlesData: const FlTitlesData(show: false),
+  //   lineBarsData: [
+  //     LineChartBarData(
+  //       isCurved: true,
+  //       color: Colors.orange,
+  //       barWidth: 3,
+  //       dotData: const FlDotData(show: true),
+  //       spots: [
+  //         for (int i = 0; i < data.length; i++)
+  //           FlSpot(i.toDouble(), data[i].closingBalance),
+  //       ],
+  //     ),
+  //   ],
+  // );
 
   List<BarChartGroupData> _buildBarGroups() {
     return List.generate(data.length, (i) {

@@ -1,5 +1,6 @@
 import 'package:cashledger/account/controller/account_controller.dart';
 import 'package:cashledger/cash_book/controller/cash_book_controller.dart';
+import 'package:cashledger/cash_book/controller/cash_book_group_provider.dart';
 import 'package:cashledger/cash_book/repository/entries_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart'; // Used for Colors.green/red in initState
@@ -109,6 +110,46 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   /// --------------------------
   /// DATE PICKER
   /// --------------------------
+
+  // Helper function to check if the date is in the previous month or earlier
+  bool _isPreviousMonthOrEarlier(DateTime selectedDate) {
+    final now = DateTime.now();
+    final firstDayOfCurrentMonth = DateTime(now.year, now.month, 1);
+
+    // Return true if the selected date is before the first day of the current month
+    return selectedDate.isBefore(firstDayOfCurrentMonth);
+  }
+
+  // Function to show the confirmation dialog
+  Future<bool> _showPreviousDateWarning(BuildContext context) async {
+    return await showCupertinoDialog<bool>(
+          context: context,
+          builder: (BuildContext context) => CupertinoAlertDialog(
+            title: const Text("Confirm Previous Entry Date"),
+            content: const Text(
+              "The selected date is from a previous month. Please confirm you wish to enter this transaction date. This is often used to prevent accidental backdating of cash transactions.",
+            ),
+            actions: <CupertinoDialogAction>[
+              CupertinoDialogAction(
+                isDestructiveAction: true,
+                onPressed: () {
+                  Navigator.pop(context, false); // User cancelled
+                },
+                child: const Text('Cancel'),
+              ),
+              CupertinoDialogAction(
+                isDefaultAction: true,
+                onPressed: () {
+                  Navigator.pop(context, true); // User confirmed
+                },
+                child: const Text('Confirm Entry'),
+              ),
+            ],
+          ),
+        ) ??
+        false; // Return false if dialog is dismissed
+  }
+
   void _openDatePicker() {
     DateTime tempDate = date; // Temporary variable to hold changes
 
@@ -119,16 +160,35 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
         color: CupertinoColors.systemBackground.resolveFrom(context),
         child: Column(
           children: [
-            // Done Button
+            // Done Button (where the logic is applied)
             Container(
               height: 44,
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 16),
               child: CupertinoButton(
                 padding: EdgeInsets.zero,
-                onPressed: () {
-                  setState(() => date = tempDate);
-                  Navigator.pop(ctx);
+                onPressed: () async {
+                  // Changed to async
+
+                  // 1. Check if the selected date is from a previous month
+                  if (_isPreviousMonthOrEarlier(tempDate)) {
+                    // 2. Show the warning dialog and await confirmation
+                    final confirmed = await _showPreviousDateWarning(context);
+
+                    if (confirmed) {
+                      // 3a. If confirmed, update state and close the picker
+                      setState(() => date = tempDate);
+                      // Navigator.pop(ctx);
+                    }
+                    // 3b. If NOT confirmed, do nothing (keep date as is, but close picker)
+                    // We still need to close the date picker modal here
+                    // because the user interaction is complete.
+                    Navigator.pop(ctx);
+                  } else {
+                    // 4. If date is current month/future (but constrained by maximumDate), update state immediately
+                    setState(() => date = tempDate);
+                    Navigator.pop(ctx);
+                  }
                 },
                 child: const Text(
                   "Done",
@@ -141,7 +201,8 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
               child: CupertinoDatePicker(
                 mode: CupertinoDatePickerMode.date,
                 initialDateTime: date,
-                maximumDate: DateTime.now(),
+                maximumDate:
+                    DateTime.now(), // Keeps the constraint that you cannot select a future date
                 onDateTimeChanged: (value) {
                   tempDate = value;
                 },
@@ -152,6 +213,49 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
       ),
     );
   }
+  // void _openDatePicker() {
+  //   DateTime tempDate = date; // Temporary variable to hold changes
+
+  //   showCupertinoModalPopup(
+  //     context: context,
+  //     builder: (ctx) => Container(
+  //       height: 300,
+  //       color: CupertinoColors.systemBackground.resolveFrom(context),
+  //       child: Column(
+  //         children: [
+  //           // Done Button
+  //           Container(
+  //             height: 44,
+  //             alignment: Alignment.centerRight,
+  //             padding: const EdgeInsets.only(right: 16),
+  //             child: CupertinoButton(
+  //               padding: EdgeInsets.zero,
+  //               onPressed: () {
+  //                 setState(() => date = tempDate);
+  //                 Navigator.pop(ctx);
+  //               },
+  //               child: const Text(
+  //                 "Done",
+  //                 style: TextStyle(fontWeight: FontWeight.bold),
+  //               ),
+  //             ),
+  //           ),
+  //           SizedBox(
+  //             height: 256,
+  //             child: CupertinoDatePicker(
+  //               mode: CupertinoDatePickerMode.date,
+  //               initialDateTime: date,
+  //               maximumDate: DateTime.now(),
+  //               onDateTimeChanged: (value) {
+  //                 tempDate = value;
+  //               },
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   /// --------------------------
   /// DELETE ACTION
@@ -183,6 +287,12 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
         ],
       ),
     );
+  }
+
+  refesh() {
+    ref.refresh(entriesListProvider);
+    ref.refresh(groupedEntriesProvider);
+    ref.refresh(monthlyTotalsProvider);
   }
 
   @override
@@ -407,55 +517,183 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         );
                         return;
                       }
-
-                      try {
-                        final entryData = {
-                          'date': date,
-                          'amount': amount,
-                          'type': type == 'receipt'
-                              ? 'debit'
-                              : 'credit', // Map back to DB type
-                          'description': descCtrl.text.trim(),
-                          'account_id': selectedAccountId!,
-                        };
-
-                        if (widget.entry == null) {
-                          await entriesNotifier.addEntry(entryData);
-                        } else {
-                          await entriesNotifier.updateEntry(
-                            widget.entry!['id'],
-                            {
-                              'date': date.toIso8601String(),
-                              'amount': amount,
-                              'type': type == 'receipt'
-                                  ? 'debit'
-                                  : 'credit', // Map back to DB type
-                              'description': descCtrl.text.trim(),
-                              'account_id': selectedAccountId!,
-                            },
-                          );
-                        }
-
-                        if (mounted) Navigator.pop(context);
-                      } catch (e) {
-                        if (mounted) {
-                          showCupertinoDialog(
-                            context: context,
-                            builder: (_) => CupertinoAlertDialog(
-                              title: const Text("Operation Failed"),
-                              content: Text(
-                                "Could not save entry. Error: ${e.toString()}",
-                              ),
-                              actions: [
-                                CupertinoDialogAction(
-                                  child: const Text("OK"),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                              ],
+                      showCupertinoDialog(
+                        context: context,
+                        builder: (_) => CupertinoAlertDialog(
+                          title: Text(
+                            type.toUpperCase(),
+                            style: TextStyle(
+                              color: type == "receipt"
+                                  ? Colors.green
+                                  : Colors.red,
                             ),
-                          );
-                        }
-                      }
+                          ),
+                          content: Column(
+                            children: [
+                              SizedBox(height: 6),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 80,
+                                    child: Text(
+                                      "Amount",
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      "₹ $amount",
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 80,
+                                    child: Text(
+                                      "Date",
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      DateFormat('MMM d, yyyy').format(date),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 80,
+                                    child: Text(
+                                      "AC Head",
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      "$selectedAccountName",
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 80,
+                                    child: Text(
+                                      "Description",
+                                      textAlign: TextAlign.left,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      descCtrl.text,
+                                      textAlign: TextAlign.right,
+                                      maxLines: 5,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            CupertinoDialogAction(
+                              child: const Text(
+                                "Cancel",
+                                style: TextStyle(
+                                  color: Color.fromARGB(255, 99, 99, 101),
+                                ),
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+
+                            CupertinoDialogAction(
+                              child: Text(
+                                "Confirm",
+                                // widget.entry == null
+                                //     ? "Save Entry"
+                                //     : "Update Entry",
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final entryData = {
+                                    'date': date,
+                                    'amount': amount,
+                                    'type': type == 'receipt'
+                                        ? 'debit'
+                                        : 'credit', // Map back to DB type
+                                    'description': descCtrl.text.trim(),
+                                    'account_id': selectedAccountId!,
+                                  };
+
+                                  if (widget.entry == null) {
+                                    await entriesNotifier.addEntry(entryData);
+                                    refesh();
+                                  } else {
+                                    await entriesNotifier.updateEntry(
+                                      widget.entry!['id'],
+                                      {
+                                        'date': date.toIso8601String(),
+                                        'amount': amount,
+                                        'type': type == 'receipt'
+                                            ? 'debit'
+                                            : 'credit', // Map back to DB type
+                                        'description': descCtrl.text.trim(),
+                                        'account_id': selectedAccountId!,
+                                      },
+                                    );
+                                    refesh();
+                                  }
+
+                                  if (mounted) Navigator.pop(context);
+                                } catch (e) {
+                                  if (mounted) {
+                                    showCupertinoDialog(
+                                      context: context,
+                                      builder: (_) => CupertinoAlertDialog(
+                                        title: const Text("Operation Failed"),
+                                        content: Text(
+                                          "Could not save entry. Error: ${e.toString()}",
+                                        ),
+                                        actions: [
+                                          CupertinoDialogAction(
+                                            child: const Text("OK"),
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      );
                     },
                   ),
                 ),
