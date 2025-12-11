@@ -101,10 +101,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 //         expensesByAccount: expensesByAccount,
 //       );
 //     });
-
-/// ------------------------------------------------------------
-/// 1️⃣ Existing Monthly Summary Provider (unchanged)
-/// ------------------------------------------------------------
 final monthlySummaryProvider =
     FutureProvider.family<MonthlyCashSummary, DateTime>((ref, date) async {
       final supabase = Supabase.instance.client;
@@ -114,35 +110,33 @@ final monthlySummaryProvider =
 
       final monthKey = "$year-${month.toString().padLeft(2, '0')}";
 
-      // This month
-      final from = DateTime(year, month, 1);
-      final to = DateTime(year, month + 1, 0);
+      // Month start → end
+      final monthFrom = DateTime(year, month, 1);
+      final monthTo = DateTime(year, month + 1, 0);
 
-      // Previous month
-      final prevFrom = DateTime(year, month - 1, 1);
-      final prevTo = DateTime(year, month, 0);
-
+      // ------------------------------------------------------------
+      // 1. OPENING BALANCE (all entries BEFORE this month)
+      // ------------------------------------------------------------
       double openingBalance = 0;
 
       final prevRows = await supabase
           .from("entries")
-          .select()
-          .gte("date", prevFrom.toIso8601String())
-          .lte("date", prevTo.toIso8601String());
+          .select("type, amount")
+          .lt("date", monthFrom.toIso8601String());
 
       for (final e in prevRows) {
-        final type = e['type'];
         final amt = (e['amount'] as num).toDouble();
-
-        openingBalance += (type == 'debit') ? amt : -amt;
+        openingBalance += e['type'] == 'debit' ? amt : -amt;
       }
 
-      // This month
+      // ------------------------------------------------------------
+      // 2. THIS MONTH'S TRANSACTIONS
+      // ------------------------------------------------------------
       final rows = await supabase
           .from("entries")
           .select("*, accounts(name)")
-          .gte("date", from.toIso8601String())
-          .lte("date", to.toIso8601String())
+          .gte("date", monthFrom.toIso8601String())
+          .lte("date", monthTo.toIso8601String())
           .order("date", ascending: true);
 
       double receipts = 0;
@@ -173,6 +167,10 @@ final monthlySummaryProvider =
         }
       }
 
+      // ------------------------------------------------------------
+      // 3. CALCULATE CLOSING BALANCE
+      // opening + receipts - expenses
+      // ------------------------------------------------------------
       final closingBalance = openingBalance + receipts - expenses;
 
       return MonthlyCashSummary(
@@ -185,48 +183,3 @@ final monthlySummaryProvider =
         expensesByAccount: expensesByAcc,
       );
     });
-
-/// ------------------------------------------------------------
-/// 2️⃣ Provider to load all 12 monthly summaries
-/// ------------------------------------------------------------
-final monthlySummaryListProvider = FutureProvider<List<MonthlyCashSummary>>((
-  ref,
-) async {
-  final List<MonthlyCashSummary> list = [];
-
-  for (int i = 1; i <= 12; i++) {
-    final month = DateTime(DateTime.now().year, i, 1);
-    final summary = await ref.watch(monthlySummaryProvider(month).future);
-    list.add(summary);
-  }
-
-  return list;
-});
-
-/// ------------------------------------------------------------
-/// 3️⃣ Convert monthly summary → chart items
-/// ------------------------------------------------------------
-final monthlyChartProvider = Provider<List<MonthlyChartItem>>((ref) {
-  final asyncData = ref.watch(monthlySummaryListProvider);
-
-  return asyncData.maybeWhen(
-    data: (list) => list
-        .map(
-          (m) => MonthlyChartItem(
-            monthLabel: m.monthKey,
-            receipts: m.receipts,
-            expenses: m.expenses,
-            closingBalance: m.closingBalance,
-          ),
-        )
-        .toList(),
-    orElse: () => [],
-  );
-});
-
-/// ------------------------------------------------------------
-/// 4️⃣ Annual chart provider (final output)
-/// ------------------------------------------------------------
-final annualSummaryProvider = Provider<List<MonthlyChartItem>>((ref) {
-  return ref.watch(monthlyChartProvider);
-});

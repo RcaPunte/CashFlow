@@ -1,4 +1,5 @@
 import 'package:cashledger/account/controller/account_controller.dart';
+import 'package:cashledger/auth/controller/auth_controller.dart';
 import 'package:cashledger/cash_book/controller/cash_book_controller.dart';
 import 'package:cashledger/cash_book/controller/cash_book_group_provider.dart';
 import 'package:cashledger/cash_book/repository/entries_repository.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart'; // Used for Colors.green/red in initState
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AddEntryScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? entry;
@@ -302,7 +304,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
 
     // Dynamic title
     final title = widget.entry == null ? "New Entry" : "Edit Entry";
-
+    final user = ref.watch(currentUserProvider);
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: Text(title),
@@ -669,6 +671,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                                   }
 
                                   if (mounted) Navigator.pop(context);
+                                  Navigator.pop(context);
                                 } catch (e) {
                                   if (mounted) {
                                     showCupertinoDialog(

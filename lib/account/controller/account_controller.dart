@@ -6,14 +6,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 final accountsListProvider = FutureProvider((ref) async {
   final supabase = Supabase.instance.client;
-  //final user = supabase.auth.currentUser;
+
   // if (user == null) return [];
 
   final res = await supabase
       .from('accounts')
       .select()
       // .eq('user_id', user.id)
-      .order('name');
+      .order('name', ascending: true);
 
   return List<Map<String, dynamic>>.from(res);
 });

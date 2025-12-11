@@ -8,7 +8,7 @@ class AccountRepository {
     final resp = await supabase
         .from('accounts')
         .select()
-        .order('created_at', ascending: false);
+        .order('name', ascending: true);
 
     return resp.map((e) => AccountModel.fromMap(e)).toList();
   }
