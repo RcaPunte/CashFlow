@@ -1,19 +1,16 @@
 import 'package:cashledger/ledger/model/ledger_entry.dart';
-import 'package:cashledger/ledger/ui/widgets/ledger_details_pie.dart'; // Assuming this leads to the detail screen
+import 'package:cashledger/ledger/ui/widgets/ledger_details_pie.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart'; // Retained for Material/InkWell context if needed, but not used here.
 import 'package:intl/intl.dart';
 
 class LedgerRowWidget extends StatelessWidget {
   final LedgerEntry entry;
   final double runningBalance;
-  // NOTE: bgColor is removed in favor of a cleaner separator line,
-  // but kept as a parameter for compatibility if the parent needs it.
   final Color bgColor;
 
   const LedgerRowWidget({
     super.key,
-    required this.bgColor, // Keeping for compatibility, but using transparent color
+    this.bgColor = CupertinoColors.systemBackground,
     required this.entry,
     required this.runningBalance,
   });
@@ -137,6 +134,116 @@ class LedgerRowWidget extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class LedgerRowHeaderWidget extends StatelessWidget {
+  final Color bgColor;
+  const LedgerRowHeaderWidget({
+    super.key,
+    this.bgColor = CupertinoColors.systemBackground,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // Standard row height for list items
+      height: 48,
+      decoration: BoxDecoration(
+        color: CupertinoColors.activeBlue,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+        // Ensure consistent background
+        border: Border(
+          bottom: BorderSide(
+            color: CupertinoColors.separator.withOpacity(
+              0.6,
+            ), // Subtle separator
+            width: 0.4,
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+        ), // Consistent padding
+        child: Row(
+          children: [
+            // 1. Date (Fixed width)
+            SizedBox(
+              width: MediaQuery.of(context).size.width * 0.15, // Adjusted width
+              child: Text(
+                "Date",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: CupertinoColors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            // 2. Description (Expanded)
+            Expanded(
+              child: Text(
+                "Particulars",
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: CupertinoColors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // 3. Debit Amount (Fixed width, Right aligned)
+            SizedBox(
+              width: MediaQuery.of(context).size.width * 0.18,
+              child: Text(
+                "Receipts",
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: CupertinoColors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+
+            // 4. Credit Amount (Fixed width, Right aligned)
+            SizedBox(
+              width: MediaQuery.of(context).size.width * 0.18,
+              child: Text(
+                "Expenses",
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: CupertinoColors.white,
+                ),
+              ),
+            ),
+
+            // 5. Running Balance (Fixed width, Right aligned)
+            SizedBox(
+              width: MediaQuery.of(context).size.width * 0.20,
+              child: Text(
+                "Amount",
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: CupertinoColors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

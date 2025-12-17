@@ -38,6 +38,7 @@ dependencies:
   flutter_riverpod: ^3.0.3
   hooks_riverpod: ^3.0.3
   go_router: ^17.0.0
+  #flutter_sticky_header: ^0.6.5
 
   # Supabase
   supabase_flutter: ^2.10.3
@@ -58,6 +59,7 @@ dependencies:
   path_provider:
   syncfusion_flutter_xlsio:
   printing: ^5.14.2
+  open_filex: ^4.7.0
   #screenshot: ^2.3.0
 
 dev_dependencies:

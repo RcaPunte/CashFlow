@@ -23,7 +23,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
 
   // Use CupertinoColors for consistency
   Color selectedColor = CupertinoColors.activeGreen;
-
+  //TODO Datet thlak tur
   DateTime date = DateTime.now();
   String? selectedAccountId;
   String type = "receipt"; // receipt (debit) or expense (credit)

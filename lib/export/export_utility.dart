@@ -7,7 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart' as xlsio;
-import 'dart:html' as html;
+// import 'dart:html' as html;
 
 class ExportUtils {
   static Future<void> openDirectExport({
@@ -505,14 +505,14 @@ class ExportUtils {
     // 📌 WEB DOWNLOAD — Important Part
     final bytes = await pdf.save();
 
-    final blob = html.Blob([bytes], 'application/pdf');
-    final url = html.Url.createObjectUrlFromBlob(blob);
+    // final blob = html.Blob([bytes], 'application/pdf');
+    // final url = html.Url.createObjectUrlFromBlob(blob);
 
-    final anchor = html.AnchorElement(href: url)
-      ..download = "Cashbook_Report_$monthLabel.pdf"
-      ..click();
+    // final anchor = html.AnchorElement(href: url)
+    //   ..download = "Cashbook_Report_$monthLabel.pdf"
+    //   ..click();
 
-    html.Url.revokeObjectUrl(url); // Cleanup
+    // html.Url.revokeObjectUrl(url); // Cleanup
   }
 
   Future<void> generateCashbookPdf({
