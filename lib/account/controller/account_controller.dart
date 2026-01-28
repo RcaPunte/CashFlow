@@ -11,15 +11,23 @@ final accountsListProvider = FutureProvider<List<AccountModel>>((ref) async {
 
     final year = ref.watch(yearProvider);
 
-    final res = await supabase
-        .from('accounts')
-        .select()
-        .eq('year', year)
-        .order('name');
+    final res = await supabase.from('accounts').select().eq('year', year);
+    // .order('name');
     final accountList = (res as List)
         .map((e) => AccountModel.fromMap(e as Map<String, dynamic>))
         .toList();
-    return accountList;
+
+    final sortedList = accountList;
+    sortedList.sort((a, b) {
+      if (a.parentId == null && b.parentId != null) {
+        return -1; // a comes before b
+      } else if (a.parentId != null && b.parentId == null) {
+        return 1; // b comes before a
+      } else {
+        return a.name.compareTo(b.name); // sort by name
+      }
+    });
+    return sortedList;
   } catch (e) {
     //throw Exception(e.toString());
     return <AccountModel>[];

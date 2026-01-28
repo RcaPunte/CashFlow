@@ -52,28 +52,24 @@ class _CreateAccountDialogState extends ConsumerState<CreateAccountDialog> {
     if (controller.text.isEmpty) return;
 
     setState(() => saving = true);
-    // 'user_id':
-    //                       "dae942b7-4188-4283-8a90-1a1cc224b167", //Supabase.instance.client.auth.currentUser.id??"sdf",
-    //                   "id": id,
-    //                   "name": nameController.text,
-    //                   "description": descriptionController.text,
-    //                   "account_type": accountType,
-    //                   "limit_amount": limitController.text.isEmpty
-    //                       ? null
-    //                       : double.parse(limitController.text),
-    await Supabase.instance.client.from('accounts').insert({
-      'user_id': Supabase.instance.client.auth.currentUser?.id,
-      'parent_account_id': widget.parent?.id,
-      'id': const Uuid().v4(),
 
-      'name': controller.text,
-      'description': "",
-      'account_type': 'custom',
-      'limit_amount': 0,
-      'year': widget.year,
+    try {
+      await Supabase.instance.client.from('accounts').insert({
+        'user_id': Supabase.instance.client.auth.currentUser?.id,
+        'parent_account_id': widget.parent?.id,
+        'id': const Uuid().v4(),
 
-      // 'parent_id': widget.parent?.id,
-    });
+        'name': controller.text,
+        'description': "",
+        'account_type': 'custom',
+        'limit_amount': 0,
+        'year': widget.year,
+
+        // 'parent_id': widget.parent?.id,
+      });
+    } catch (e) {
+      debugPrint("Error creating account: $e");
+    }
 
     setState(() => saving = false);
     Navigator.pop(context);

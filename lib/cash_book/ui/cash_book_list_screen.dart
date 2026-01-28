@@ -456,7 +456,7 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
             children: [
               SizedBox(
                 // color: CupertinoColors.activeGreen,
-                width: 110,
+                width: 108,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -482,7 +482,7 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
               const SizedBox(width: 12),
               SizedBox(
                 //color: CupertinoColors.activerGreen,
-                width: 120,
+                width: 114,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -507,7 +507,7 @@ class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
             ],
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 6),
 
           // 3. Export Button (Far Right)
           CupertinoButton(

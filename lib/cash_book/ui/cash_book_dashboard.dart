@@ -94,7 +94,7 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
                   Text(
                     "$currentYear Overall Summary",
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 21,
                       fontWeight: FontWeight.bold,
                       color: CupertinoColors.label,
                     ),
@@ -314,40 +314,6 @@ class _DashboardSummaryCard extends StatelessWidget {
       ),
     );
   }
-  // Widget _summaryRow(String title, double value, {Color? color}) {
-  //   // Resolve colors dynamically
-  //   final effectiveColor =
-  //       color?.resolveFrom(context) ??
-  //       (value >= 0
-  //           ? CupertinoColors.label.resolveFrom(context)
-  //           : CupertinoColors.systemRed.resolveFrom(context));
-
-  //   final valueFormatter = NumberFormat('#,##0.00', 'en_US');
-
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 4),
-  //     child: Row(
-  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //       children: [
-  //         Text(
-  //           title,
-  //           style: TextStyle(
-  //             fontSize: 15,
-  //             color: CupertinoColors.secondaryLabel.resolveFrom(context),
-  //           ),
-  //         ),
-  //         Text(
-  //           "₹${valueFormatter.format(value)}",
-  //           style: TextStyle(
-  //             fontWeight: FontWeight.w700,
-  //             fontSize: 16,
-  //             color: effectiveColor,
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
 
   @override
   Widget build(BuildContext context) {

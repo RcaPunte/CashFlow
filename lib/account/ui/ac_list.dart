@@ -8,6 +8,7 @@ import 'package:flutter/material.dart'
     show Divider, IconButton, ListTile, Material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+//ACTIVE
 class AccountsPage extends ConsumerWidget {
   const AccountsPage({super.key});
 
@@ -31,24 +32,9 @@ class AccountsPage extends ConsumerWidget {
             },
           ),
         ),
-        child: AccountTreeView(yearId: "2026"),
-        // accountsAsync.when(
-        //   loading: () => const Center(child: CupertinoActivityIndicator()),
-        //   error: (e, _) => Center(child: Text(e.toString())),
-        //   data: (accounts) {
-        //     final parents = accounts.where((a) => a.parentId == null).toList();
-
-        //     return ListView(
-        //       children: parents.map((p) {
-        //         final children = accounts
-        //             .where((c) => c.parentId == p.id)
-        //             .toList();
-
-        //         return _AccountTile(account: p, children: children);
-        //       }).toList(),
-        //     );
-        //   },
-        // ),
+        child: SingleChildScrollView(
+          child: AccountTreeView(yearId: year.toString()),
+        ),
       ),
     );
   }
