@@ -1,46 +1,7 @@
-import 'package:cashledger/account/ui/ac_list.dart';
+import 'package:cashledger/account/ui/main_ac_page.dart';
 import 'package:cashledger/cash_book/ui/cash_book_dashboard.dart';
 import 'package:cashledger/ledger/ui/ledger_screen.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Home Screen')),
-      body: Column(
-        children: [
-          ElevatedButton(
-            onPressed: () {
-              context.push('/entries');
-            },
-            child: const Text('Go to Entries'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                CupertinoPageRoute(builder: (_) => const LedgerScreen()),
-              );
-              //context.push('/ledger');
-            },
-            child: const Text('Go to Entries'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.push('/entries/add');
-            },
-            child: const Text('Go to Entries'),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});

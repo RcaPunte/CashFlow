@@ -1,29 +1,7 @@
 import 'package:cashledger/auth/controller/auth_controller.dart';
-import 'package:cashledger/auth/controller/auth_provider.dart';
 import 'package:cashledger/auth/ui/sign_up_screen.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// class LoginPage extends ConsumerWidget {
-//   const LoginPage({super.key});
-
-//   @override
-//   Widget build(BuildContext context, WidgetRef ref) {
-//     final auth = ref.read(authProvider.notifier);
-
-//     return Scaffold(
-//       body: Center(
-//         child: ElevatedButton(
-//           child: const Text("Sign in with Google"),
-//           onPressed: () async {
-//             await auth.signInWithGoogle();
-//           },
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});

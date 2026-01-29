@@ -4,8 +4,9 @@ import 'package:cashledger/cash_book/ui/cash_book_add_edit_screen.dart';
 import 'package:cashledger/cash_book/ui/cash_book_list_screen.dart';
 import 'package:cashledger/cash_book/ui/widget/financial_yeaer_selector.dart';
 import 'package:cashledger/ledger/ui/monthly_ledger_list_screen.dart';
+import 'package:cashledger/user_profile/ui/widget/user_profile_button.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart'; // Retained for certain color usage or scaffolding
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:cashledger/cash_book/by_month/controller/monthly_summary_provider.dart';
@@ -31,7 +32,7 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
   }
 
   List<DateTime> _generateMonths(int startYear) {
-    final endDate = DateTime(startYear + 1, 3, 31); // FY end (India)
+    final endDate = DateTime(startYear, 12, 31); // FY end (India)
     return List.generate(
       12,
       (i) => DateTime(endDate.year, endDate.month - i, 1),
@@ -52,10 +53,9 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
     // Check for wide screen
     final isWideScreen = MediaQuery.of(context).size.width >= kTabletBreakpoint;
 
-    // Components to be passed to the adaptive layout
     final summaryCard = _DashboardSummaryCard(summaryList: summaryList);
     final annualChart = SizedBox(
-      height: 250, // Fixed height for chart area
+      height: 250,
       child: annualChartAsync.when(
         loading: () => const Center(child: CupertinoActivityIndicator()),
         error: (e, _) => Center(child: Text("Error loading chart: $e")),
@@ -66,13 +66,22 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: Text("Cash Book"),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () {
-            // ignore: unused_result
-            ref.refresh(annualChartProvider(currentYear));
-          },
-          child: const Icon(CupertinoIcons.refresh, size: 22),
+        trailing: SizedBox(
+          width: 100,
+          child: Row(
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () {
+                  // ignore: unused_result
+                  ref.refresh(annualChartProvider(currentYear));
+                },
+                child: const Icon(CupertinoIcons.refresh, size: 22),
+              ),
+
+              UserProfileButton(),
+            ],
+          ),
         ),
       ),
 

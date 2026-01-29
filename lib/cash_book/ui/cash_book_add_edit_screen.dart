@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cashledger/account/controller/account_controller.dart';
 import 'package:cashledger/account/model/account_model.dart';
 import 'package:cashledger/auth/controller/auth_controller.dart';
@@ -25,7 +27,8 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
 
   DateTime date = DateTime.now();
   String? selectedAccountId;
-  String selectedSubAccountId = "";
+
+  String? selectedSubAccountId;
   String type = "receipt";
 
   @override
@@ -57,57 +60,190 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   /// --------------------------
   /// ACCOUNT PICKER
   /// --------------------------
+  ///
+  Map<String?, List<AccountModel>> buildAccountTree(
+    List<AccountModel> accounts,
+  ) {
+    final Map<String?, List<AccountModel>> tree = {};
+    for (final acc in accounts) {
+      tree.putIfAbsent(acc.parentId, () => []).add(acc);
+    }
+    return tree;
+  }
+
   void _openAccountPicker(List<AccountModel> accounts) {
-    // Determine the initial index for the picker
-    int initialIndex = accounts.indexWhere((a) => a.id == selectedAccountId);
-    if (initialIndex == -1) initialIndex = 0;
+    final tree = buildAccountTree(accounts);
+    final roots = tree[null] ?? [];
+
+    int mainIndex = roots.indexWhere((a) => a.id == selectedAccountId);
+    if (mainIndex < 0) mainIndex = 0;
 
     showCupertinoModalPopup(
       context: context,
-      builder: (_) => Container(
-        height: 320, // Slightly taller container
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: Column(
-          children: [
-            Container(
-              height: 44,
-              alignment: Alignment.center,
-              child: const Text(
-                "Select Account",
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            SizedBox(
-              height: 200,
-              child: CupertinoPicker(
-                itemExtent: 32,
-                scrollController: FixedExtentScrollController(
-                  initialItem: initialIndex,
-                ),
-                onSelectedItemChanged: (index) {
-                  // Update state immediately, but only set when 'Done' or implicitly selected
+      builder: (_) {
+        AccountModel selectedMain = roots[mainIndex];
 
-                  selectedAccountId = accounts[index].id;
-                },
-                children: accounts
-                    .map((a) => Center(child: Text(a.name)))
-                    .toList(),
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final subAccounts = tree[selectedMain.id] ?? [];
+
+            return Container(
+              height: 360,
+              color: CupertinoColors.systemBackground.resolveFrom(context),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Select Account",
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+
+                  /// 🔹 MAIN ACCOUNT PICKER
+                  SizedBox(
+                    height: 120,
+                    child: CupertinoPicker(
+                      itemExtent: 32,
+                      scrollController: FixedExtentScrollController(
+                        initialItem: mainIndex,
+                      ),
+                      onSelectedItemChanged: (index) {
+                        setModalState(() {
+                          selectedMain = roots[index];
+                        });
+                      },
+                      children: roots
+                          .map((a) => Center(child: Text(a.name)))
+                          .toList(),
+                    ),
+                  ),
+
+                  /// 🔹 SUB ACCOUNT PICKER (ONLY IF EXISTS)
+                  if (subAccounts.isNotEmpty) ...[
+                    const Divider(height: 1),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        "Sub Account",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 120,
+                      child: CupertinoPicker(
+                        itemExtent: 32,
+                        onSelectedItemChanged: (index) {
+                          setModalState(() {
+                            selectedAccountId = subAccounts[index].id;
+                            selectedSubAccountId = subAccounts[index].id;
+                          });
+                          // log(selectedSubAccountId.toString());
+                          //   selectedAccountName = subAccounts[index].name;
+                        },
+                        children: subAccounts
+                            .map((a) => Center(child: Text(a.name)))
+                            .toList(),
+                      ),
+                    ),
+                  ],
+
+                  /// 🔹 DONE BUTTON
+                  CupertinoButton(
+                    child: const Text("Done"),
+                    onPressed: () {
+                      // If no sub account, use main account
+                      if (subAccounts.isNotEmpty) {
+                        selectedAccountId =
+                            subAccounts[selectedMain.id == selectedMain.id
+                                    ? 0
+                                    : 1]
+                                .id;
+                        selectedSubAccountId = subAccounts
+                            .firstWhere(
+                              (a) => a.id == selectedSubAccountId,
+                              orElse: () => AccountModel(
+                                id: "",
+                                name: 'Sub Account Missing',
+                                year: DateTime.now().year,
+                                parentId: null,
+                                accountType: '',
+                              ),
+                            )
+                            .id;
+                        log(selectedSubAccountId.toString());
+                      } else {
+                        selectedAccountId = selectedMain.id;
+                        selectedSubAccountId = null;
+                      }
+                      // selectedAccountId = selectedMain.id;
+                      setState(() {});
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
               ),
-            ),
-            // Explicit Done button to confirm selection (optional, but good practice)
-            CupertinoButton(
-              child: const Text("Done"),
-              onPressed: () {
-                // Ensure the last selected item is applied if they didn't scroll to it
-                if (mounted) setState(() {});
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
+            );
+          },
+        );
+      },
     );
   }
+
+  // void _openAccountPicker(List<AccountModel> accounts) {
+  //   final sortedAccounts = buildAccountTree(accounts);
+  //   final roots = sortedAccounts[null] ?? [];
+  //   // Determine the initial index for the picker
+  //   int initialIndex = roots.indexWhere((a) => a.id == selectedAccountId) ?? 0;
+  //   if (initialIndex == -1) initialIndex = 0;
+
+  //   showCupertinoModalPopup(
+  //     context: context,
+  //     builder: (_) => Container(
+  //       height: 320, // Slightly taller container
+  //       color: CupertinoColors.systemBackground.resolveFrom(context),
+  //       child: Column(
+  //         children: [
+  //           Container(
+  //             height: 44,
+  //             alignment: Alignment.center,
+  //             child: const Text(
+  //               "Select Account",
+  //               style: TextStyle(fontWeight: FontWeight.w600),
+  //             ),
+  //           ),
+  //           SizedBox(
+  //             height: 200,
+  //             child: CupertinoPicker(
+  //               itemExtent: 32,
+  //               scrollController: FixedExtentScrollController(
+  //                 initialItem: initialIndex,
+  //               ),
+  //               onSelectedItemChanged: (index) {
+  //                 // Update state immediately, but only set when 'Done' or implicitly selected
+
+  //                 selectedAccountId = roots[index].id;
+  //               },
+  //               children: roots
+  //                   .map((a) => Center(child: Text(a.name)))
+  //                   .toList(),
+  //             ),
+  //           ),
+  //           // Explicit Done button to confirm selection (optional, but good practice)
+  //           CupertinoButton(
+  //             child: const Text("Done"),
+  //             onPressed: () {
+  //               // Ensure the last selected item is applied if they didn't scroll to it
+  //               if (mounted) setState(() {});
+  //               Navigator.pop(context);
+  //             },
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   /// --------------------------
   /// DATE PICKER
@@ -248,6 +384,58 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
     );
   }
 
+  String getSelectedAccountName({
+    required List<AccountModel> accounts,
+    required String? selectedAccountId,
+    required String? selectedSubAccountId,
+  }) {
+    if (selectedAccountId == null) {
+      return "Select Account";
+    }
+
+    // If sub-account selected → return parent name
+    if (selectedSubAccountId != null) {
+      final subAccount = accounts.firstWhere(
+        (a) => a.id == selectedSubAccountId,
+        orElse: () => AccountModel(
+          id: '',
+          name: 'Unknown Account',
+          year: DateTime.now().year,
+          parentId: null,
+          accountType: '',
+        ),
+      );
+
+      if (subAccount.parentId != null) {
+        final parent = accounts.firstWhere(
+          (a) => a.id == subAccount.parentId,
+          orElse: () => AccountModel(
+            id: '',
+            name: 'Parent Account Missing',
+            year: DateTime.now().year,
+            parentId: null,
+            accountType: '',
+          ),
+        );
+        return parent.name;
+      }
+    }
+
+    // Otherwise return selected main account
+    return accounts
+        .firstWhere(
+          (a) => a.id == selectedAccountId,
+          orElse: () => AccountModel(
+            id: '',
+            name: 'Unknown Account',
+            year: DateTime.now().year,
+            parentId: null,
+            accountType: '',
+          ),
+        )
+        .name;
+  }
+
   refesh() {
     ref.refresh(entriesListProvider);
     ref.refresh(groupedEntriesProvider);
@@ -285,8 +473,15 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
           data: (rawAccounts) {
             final accounts =
                 rawAccounts; // List<Map<String, dynamic>>.from(rawAccounts);
+
             final selectedAccountName = selectedAccountId == null
                 ? "Select Account"
+                : selectedSubAccountId != null
+                ? getSelectedAccountName(
+                    accounts: accounts,
+                    selectedAccountId: selectedAccountId,
+                    selectedSubAccountId: selectedSubAccountId,
+                  )
                 : accounts
                       .firstWhere(
                         (a) => a.id == selectedAccountId,
@@ -299,7 +494,21 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         ),
                       )
                       .name;
-
+            final selectedSubAccountName =
+                selectedSubAccountId == null || selectedSubAccountId == ""
+                ? ""
+                : accounts
+                      .firstWhere(
+                        (a) => a.id == selectedSubAccountId,
+                        orElse: () => AccountModel(
+                          id: "",
+                          name: 'Sub Account Missing',
+                          year: DateTime.now().year,
+                          parentId: null,
+                          accountType: '',
+                        ),
+                      )
+                      .name;
             return ListView(
               padding: const EdgeInsets.only(top: 20, bottom: 40),
               children: [
@@ -383,15 +592,15 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
-
-                    // 3. ACCOUNT PICKER FIELD
                     CupertinoListTile(
                       title: const Text("Account"),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            selectedAccountName,
+                            selectedSubAccountId == null
+                                ? selectedAccountName
+                                : "$selectedAccountName-$selectedSubAccountName",
                             style: TextStyle(
                               color: selectedAccountId == null
                                   ? CupertinoColors.placeholderText
@@ -407,6 +616,29 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                       ),
                       onTap: () => _openAccountPicker(accounts),
                     ),
+                    // 3. ACCOUNT PICKER FIELD
+                    // CupertinoListTile(
+                    //   title: const Text("Account"),
+                    //   trailing: Row(
+                    //     mainAxisSize: MainAxisSize.min,
+                    //     children: [
+                    //       Text(
+                    //         selectedAccountName,
+                    //         style: TextStyle(
+                    //           color: selectedAccountId == null
+                    //               ? CupertinoColors.placeholderText
+                    //               : CupertinoColors.label,
+                    //         ),
+                    //       ),
+                    //       const Icon(
+                    //         CupertinoIcons.right_chevron,
+                    //         size: 18,
+                    //         color: CupertinoColors.systemGrey,
+                    //       ),
+                    //     ],
+                    //   ),
+                    //   onTap: () => _openAccountPicker(accounts),
+                    // ),
 
                     // 4. DATE PICKER FIELD
                     CupertinoListTile(

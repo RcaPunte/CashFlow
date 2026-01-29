@@ -4,7 +4,6 @@ import 'package:cashledger/ledger/export/ledger_export_button.dart';
 import 'package:cashledger/ledger/model/ledger_entry.dart';
 import 'package:cashledger/ledger/ui/widgets/ledger_row.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 

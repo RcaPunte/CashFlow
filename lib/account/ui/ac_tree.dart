@@ -1,7 +1,6 @@
 import 'package:cashledger/account/controller/account_controller.dart';
 import 'package:cashledger/account/model/account_model.dart';
 import 'package:cashledger/account/ui/create_ac.dart';
-import 'package:cashledger/ledger/controller/ledger_controller.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,7 +14,7 @@ class AccountTreeView extends ConsumerWidget {
     final asyncAccounts = ref.watch(accountsListProvider);
 
     return asyncAccounts.when(
-      loading: () => const CupertinoActivityIndicator(),
+      loading: () => Center(child: const CupertinoActivityIndicator()),
       error: (e, _) => Text(e.toString()),
       data: (accounts) {
         final tree = buildAccountTree(accounts);

@@ -1,7 +1,7 @@
 import 'package:cashledger/account/model/account_model.dart';
 import 'package:cashledger/account/ui/account_add_screen.dart';
 import 'package:cashledger/account/ui/account_edit_screen.dart';
-import 'package:cashledger/auth/controller/auth_provider.dart';
+import 'package:cashledger/auth/controller/auth_controller.dart';
 import 'package:cashledger/auth/ui/login_screen.dart';
 import 'package:cashledger/cash_book/ui/cash_book_add_edit_screen.dart';
 import 'package:cashledger/cash_book/ui/cash_book_list_screen.dart';
@@ -16,7 +16,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     routes: cashbookRoutes,
     redirect: (context, state) {
-      final user = ref.watch(authProvider);
+      final user = ref.watch(authServiceProvider).currentUser;
       final loggingIn = state.matchedLocation == "/login";
 
       if (user == null) {
