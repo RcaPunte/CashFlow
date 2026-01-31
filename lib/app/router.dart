@@ -16,7 +16,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     routes: cashbookRoutes,
     redirect: (context, state) {
-      final user = ref.watch(authServiceProvider).currentUser;
+      final user = ref.watch(currentUserProvider);
       final loggingIn = state.matchedLocation == "/login";
 
       if (user == null) {

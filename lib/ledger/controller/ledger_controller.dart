@@ -1,4 +1,5 @@
 import 'package:cashledger/account/model/account_model.dart';
+import 'package:cashledger/cash_book/ui/widget/financial_yeaer_selector.dart';
 import 'package:cashledger/ledger/model/ledger_entry.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -101,11 +102,15 @@ final ledgerControllerProvider =
 // ───── Account List (unchanged, but cleaned) ─────
 final accountListProvider = FutureProvider<List<AccountModel>>((ref) async {
   final supabase = Supabase.instance.client;
+  final year = ref.watch(yearProvider);
   final res = await supabase
       .from('accounts')
       .select()
+      .eq('year', year)
       .order('name', ascending: true);
-  final accounts = (res as List).map((e) => AccountModel.fromMap(e)).toList();
+
+  final rawAccount= (res as List).map((e) => AccountModel.fromMap(e)).toList();
+  final accounts = (rawAccount).where((ac) => ac.parentId == null).toList();
   accounts.insert(
     0,
     AccountModel(id: "", name: "All Accounts", accountType: "Both"),

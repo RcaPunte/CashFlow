@@ -50,7 +50,6 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
     }
 
     return CupertinoPageScaffold(
-      // 1. NavigationBar is correct, but use `CupertinoIcons.add_circled_solid` for prominence
       navigationBar: CupertinoNavigationBar(
         middle: const Text('Cashbook'),
         trailing: Row(
@@ -378,22 +377,6 @@ class CashbookSummaryCard extends StatelessWidget {
     );
   }
 }
-
-// Assuming ExportUtils is available elsewhere
-// class ExportUtils {
-//   static void openDirectExport({
-//     required BuildContext context,
-//     required List<Map<String, dynamic>> entries,
-//   }) {}
-// import 'package:flutter/cupertino.dart';
-
-// Assuming ExportUtils is defined elsewhere in your project
-// class ExportUtils {
-//   static void openDirectExport({
-//     required BuildContext context,
-//     required List<Map<String, dynamic>> entries,
-//   }) {}
-// }
 
 class _MonthHeaderDelegate extends SliverPersistentHeaderDelegate {
   final String monthKey;

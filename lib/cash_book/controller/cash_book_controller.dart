@@ -142,10 +142,6 @@ final entriesListProvider = FutureProvider((ref) async {
   final filter = ref.watch(cashbookFilterProvider);
 
   final supabase = Supabase.instance.client;
-  // final result = await supabase
-  //     .from("entries")
-  //     .select("*, accounts(*)")
-  //     .order("date", ascending: false);
   final result = await supabase
       .from("entries")
       .select("*, accounts(*)")

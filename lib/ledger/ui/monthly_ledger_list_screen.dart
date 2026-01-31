@@ -1,6 +1,7 @@
 import 'package:cashledger/cash_book/by_month/controller/monthly_summary_provider.dart';
 import 'package:cashledger/cash_book/by_month/model/monthly_cash_summary.dart';
 import 'package:cashledger/cash_book/by_month/ui/monthly_report_screen.dart';
+import 'package:cashledger/cash_book/ui/widget/financial_yeaer_selector.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart'; // Keep for Material-based Riverpod/scaffolding compatibility if needed, but UI is Cupertino
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,8 +24,17 @@ class _MonthlyLedgerListScreenState
   @override
   void initState() {
     super.initState();
+    initDate();
     // Generate the last 12 months, ordered oldest to newest
-    final now = DateTime.now();
+  }
+
+  initDate() {
+    final year = ref.read(yearProvider);
+    final now = DateTime(
+      year,
+      12,
+      1,
+    ); // Start from the end of the selected year
     months = List.generate(
       12,
       (i) => DateTime(now.year, now.month - i, 1),

@@ -10,7 +10,11 @@ class AuthService {
   User? get currentUser => _supabase.auth.currentUser;
 
   Future<AuthResponse> signInWithPassword(String email, String password) {
-    return _supabase.auth.signInWithPassword(email: email, password: password);
+    final res = _supabase.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+    return res;
   }
 
   Future<AuthResponse> signUp(

@@ -1,7 +1,10 @@
 import 'package:cashledger/auth/controller/auth_controller.dart';
 import 'package:cashledger/auth/ui/sign_up_screen.dart';
+import 'package:cashledger/home/home_screen.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -27,10 +30,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // check for email confirmation required
         _showMessage('Check your email for confirmation link if required.');
       }
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          );
+          setState(() => loading = false);
+        }
+      }
       // Supabase will trigger auth stream; AuthGate will pick it up
     } catch (e) {
       _showMessage('Login failed: ${_errorMessage(e)}');
     } finally {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        setState(() => loading = false);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+        setState(() => loading = false);
+        // if (mounted) {
+        //   Navigator.pushReplacement(
+        //     context,
+        //     MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        //   );
+        //   setState(() => loading = false);
+        // }
+      }
       if (mounted) setState(() => loading = false);
     }
   }
