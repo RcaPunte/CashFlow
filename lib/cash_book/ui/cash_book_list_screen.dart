@@ -41,9 +41,8 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
         .where((e) => e['type'] == 'credit')
         .fold(0.0, (s, e) => s + (e['amount'] ?? 0).toDouble());
     final balance =
-        (totals.values.first['openingBalance'] ?? 0.0) +
-        totalReceipts -
-        totalExpenses;
+        // (totals.values.first['openingBalance'] ?? 0.0) +
+        totalReceipts - totalExpenses;
     refesh() {
       ref.refresh(entriesProvider);
     }

@@ -44,7 +44,10 @@ class LedgerControllerNotifier extends StateNotifier<AsyncValue<LedgerState>> {
       var beforeQuery = supabase
           .from("entries")
           .select("amount, type")
-          .lt("date", from.toIso8601String());
+          .lt(
+            "date",
+            DateTime(selectedFromYear, from.month, 1).toIso8601String(),
+          );
 
       if (accountId != null && accountId.isNotEmpty) {
         beforeQuery = beforeQuery.eq("account_id", accountId);
@@ -109,7 +112,7 @@ final accountListProvider = FutureProvider<List<AccountModel>>((ref) async {
       .eq('year', year)
       .order('name', ascending: true);
 
-  final rawAccount= (res as List).map((e) => AccountModel.fromMap(e)).toList();
+  final rawAccount = (res as List).map((e) => AccountModel.fromMap(e)).toList();
   final accounts = (rawAccount).where((ac) => ac.parentId == null).toList();
   accounts.insert(
     0,
