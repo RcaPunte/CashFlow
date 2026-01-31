@@ -8,8 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'cash_book_add_edit_screen.dart';
 
-// --- Widget Updates ---
-
 class CashbookScreen extends ConsumerStatefulWidget {
   const CashbookScreen({super.key});
 
@@ -28,8 +26,6 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
     return monthHeaderFormat.format(DateTime(y, m));
   }
 
-  //final ScreenshotController screenshotController = ScreenshotController();
-
   @override
   Widget build(BuildContext context) {
     // Data fetching logic remains the same
@@ -44,7 +40,10 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
     final totalExpenses = entries
         .where((e) => e['type'] == 'credit')
         .fold(0.0, (s, e) => s + (e['amount'] ?? 0).toDouble());
-    final balance = totalReceipts - totalExpenses;
+    final balance =
+        (totals.values.first['openingBalance'] ?? 0.0) +
+        totalReceipts -
+        totalExpenses;
     refesh() {
       ref.refresh(entriesProvider);
     }
@@ -55,17 +54,6 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // CupertinoButton(
-            //   padding: EdgeInsets.zero,
-            //   child: const Icon(CupertinoIcons.square_arrow_up, size: 24),
-            //   onPressed: () => ExportUtils.openCashBookExportSheet(
-            //     context: context,
-            //     entries: entries,
-            //     totalReceipts: totalReceipts,
-            //     totalExpenses: totalExpenses,
-            //     //screenshotController: screenshotController,
-            //   ),
-            // ),
             YearSelector(),
             CupertinoButton(
               padding: EdgeInsets.zero,
@@ -85,14 +73,16 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
       ),
       child: CustomScrollView(
         slivers: [
-          // 2. Summary Card in a SliverToBoxAdapter for smoother scrolling
-          SliverToBoxAdapter(
-            child: CashbookSummaryCard(
-              totalReceipts: totalReceipts,
-              totalExpenses: totalExpenses,
-              balance: balance,
-            ),
-          ),
+          // SliverToBoxAdapter(
+          //   child: CashbookSummaryCard(
+          //     openingBalance: entries.isNotEmpty
+          //         ? (totals.values.first['openingBalance'] ?? 0.0)
+          //         : 0.0,
+          //     totalReceipts: totalReceipts,
+          //     totalExpenses: totalExpenses,
+          //     balance: balance,
+          //   ),
+          // ),
 
           // 3. Search/Filter Bar
           SliverToBoxAdapter(child: _buildSearchFilterBar(context, ref)),
@@ -114,8 +104,6 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
             SliverList(
               delegate: SliverChildListDelegate([
                 CupertinoListSection(
-                  // Set background color
-                  //to systemBackground for contrast with the header
                   backgroundColor: CupertinoColors.systemGroupedBackground,
                   children: [
                     for (final e in section.value)
@@ -306,15 +294,15 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
   }
 }
 
-// --- New/Updated Components ---
-
 class CashbookSummaryCard extends StatelessWidget {
+  final double openingBalance;
   final double totalReceipts;
   final double totalExpenses;
   final double balance;
 
   const CashbookSummaryCard({
     super.key,
+    required this.openingBalance,
     required this.totalReceipts,
     required this.totalExpenses,
     required this.balance,
@@ -360,17 +348,31 @@ class CashbookSummaryCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment
               .spaceBetween, // Use spaceBetween for cleaner layout
           children: [
-            _summaryItem(
-              'Receipts',
-              totalReceipts,
-              CupertinoColors.activeGreen,
+            Column(
+              children: [
+                _summaryItem(
+                  'Opening Balance',
+                  openingBalance,
+                  CupertinoColors.secondaryLabel,
+                ),
+
+                _summaryItem('Balance', balance, CupertinoColors.activeBlue),
+              ],
             ),
-            _summaryItem(
-              'Expenses',
-              totalExpenses,
-              CupertinoColors.destructiveRed,
+            Column(
+              children: [
+                _summaryItem(
+                  'Receipts',
+                  totalReceipts,
+                  CupertinoColors.activeGreen,
+                ),
+                _summaryItem(
+                  'Expenses',
+                  totalExpenses,
+                  CupertinoColors.destructiveRed,
+                ),
+              ],
             ),
-            _summaryItem('Balance', balance, CupertinoColors.activeBlue),
           ],
         ),
       ),

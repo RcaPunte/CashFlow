@@ -223,7 +223,7 @@ class _MonthlySummaryTile extends StatelessWidget {
         Navigator.push(
           context,
           CupertinoPageRoute(
-            builder: (_) => MonthlyReportScreen(date: monthDate),
+            builder: (_) => MonthlyReportScreen(month: monthDate),
           ),
         );
       },

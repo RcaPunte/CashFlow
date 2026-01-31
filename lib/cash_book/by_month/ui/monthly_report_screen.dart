@@ -1,618 +1,104 @@
-import 'dart:io';
-import 'dart:ui' as ui;
+// Full working example: expandable/collapsible parent → child accounts
+// Tally / Zoho style
 
 import 'package:cashledger/cash_book/by_month/controller/monthly_summary_provider.dart';
-import 'package:cashledger/cash_book/by_month/helper/monthly_export_excell.dart';
-import 'package:cashledger/cash_book/by_month/helper/monthly_pdf_export.dart';
 import 'package:cashledger/cash_book/by_month/model/monthly_cash_summary.dart';
+import 'package:cashledger/cash_book/ui/widget/financial_yeaer_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart'
-    show Colors, Divider; // Only for chart colors
-import 'package:flutter/rendering.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class MonthlyReportScreen extends ConsumerStatefulWidget {
-  final DateTime date; // e.g., 2025-01-01
+class AccountSummaryCard extends StatelessWidget {
+  final MonthlyCashSummary summary;
 
-  const MonthlyReportScreen({super.key, required this.date});
+  const AccountSummaryCard({super.key, required this.summary});
 
-  @override
-  ConsumerState<MonthlyReportScreen> createState() =>
-      _MonthlyReportScreenState();
-}
+  Widget _row(
+    BuildContext context,
+    String label,
+    double value, {
+    Color? color,
+  }) {
+    final resolved =
+        color ??
+        (value >= 0
+            ? CupertinoColors.label.resolveFrom(context)
+            : CupertinoColors.systemRed.resolveFrom(context));
 
-class _MonthlyReportScreenState extends ConsumerState<MonthlyReportScreen> {
-  final GlobalKey _repaintKey = GlobalKey();
-
-  // ─────────────────────────────────────
-  // Share and Build methods (omitted for brevity)
-  // ─────────────────────────────────────
-
-  Future<XFile?> _captureWidgetAsImage() async {
-    try {
-      final boundary =
-          _repaintKey.currentContext!.findRenderObject()
-              as RenderRepaintBoundary;
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      final bytes = byteData!.buffer.asUint8List();
-
-      final dir = await getTemporaryDirectory();
-      final file = File(
-        '${dir.path}/monthly_report_${widget.date.year}_${widget.date.month}.png',
-      );
-      await file.writeAsBytes(bytes);
-      return XFile(file.path);
-    } catch (e) {
-      if (mounted) {
-        showCupertinoDialog(
-          context: context,
-          builder: (_) => CupertinoAlertDialog(
-            title: const Text('Capture Failed'),
-            content: Text('Could not generate image. Error: ${e.toString()}'),
-            actions: [
-              CupertinoDialogAction(
-                child: const Text('OK'),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: CupertinoColors.secondaryLabel.resolveFrom(context),
+            ),
           ),
-        );
-      }
-      return null;
-    }
-  }
-
-  void _openShareActionSheet(MonthlyCashSummary m) {
-    showCupertinoModalPopup<void>(
-      context: context,
-      builder: (BuildContext context) => CupertinoActionSheet(
-        title: Text(
-          'Share Report: ${DateFormat('MMMM yyyy').format(widget.date)}',
-        ),
-        actions: <CupertinoActionSheetAction>[
-          CupertinoActionSheetAction(
-            child: const Text('Share as Image (PNG)'),
-            onPressed: () async {
-              Navigator.pop(context);
-              final xFile = await _captureWidgetAsImage();
-              if (xFile != null) {
-                await Share.shareXFiles(
-                  [xFile],
-                  subject:
-                      'Cashbook Report – ${DateFormat('MMMM yyyy').format(widget.date)}',
-                );
-              }
-            },
-          ),
-          CupertinoActionSheetAction(
-            child: const Text('Export & Share as PDF'),
-            onPressed: () async {
-              Navigator.pop(context);
-              final file = await exportMonthlyPdf(m);
-              await Share.shareXFiles([XFile(file.path)]);
-            },
-          ),
-          CupertinoActionSheetAction(
-            child: const Text('Export & Share as Excel (XLSX)'),
-            onPressed: () async {
-              Navigator.pop(context);
-              final file = await exportMonthlyExcel(m);
-              await Share.shareXFiles([XFile(file.path)]);
-            },
+          Text(
+            "₹${value.toStringAsFixed(2)}",
+            style: TextStyle(fontWeight: FontWeight.w600, color: resolved),
           ),
         ],
-        cancelButton: CupertinoActionSheetAction(
-          isDefaultAction: true,
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: const Text('Cancel'),
-        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final summaryAsync = ref.watch(monthlySummaryProvider(widget.date));
+    final totalIncome = summary.openingBalance + summary.receipts;
 
-    return CupertinoPageScaffold(
-      child: summaryAsync.when(
-        loading: () =>
-            const Center(child: CupertinoActivityIndicator(radius: 18)),
-        error: (err, _) => Center(child: Text('Error: $err')),
-        data: (summary) => CustomScrollView(
-          slivers: [
-            CupertinoSliverNavigationBar(
-              largeTitle: const Text('Monthly Summary'),
-              middle: Text(DateFormat('MMMM yyyy').format(widget.date)),
-              trailing: CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => _openShareActionSheet(summary),
-                child: const Icon(CupertinoIcons.ellipsis_circle),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: RepaintBoundary(
-                key: _repaintKey,
-                child: Container(
-                  color: CupertinoColors.systemGroupedBackground,
-                  child: _buildReportContent(summary),
-                ),
-              ),
-            ),
-            const SliverToBoxAdapter(child: SizedBox(height: 30)),
-          ],
-        ),
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground.resolveFrom(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            color: CupertinoColors.systemGrey
+                .resolveFrom(context)
+                .withOpacity(0.2),
+          ),
+        ],
       ),
-    );
-  }
-
-  // ─────────────────────────────────────
-  // Report Content (UPDATED FOOTER)
-  // ─────────────────────────────────────
-  Widget _buildReportContent(MonthlyCashSummary m) {
-    // 1. Map to store aggregated data: {AccountName: [TotalIn, TotalOut]}
-    final Map<String, List<double>> aggregatedData = {};
-
-    // Helper function to initialize and update totals
-    void aggregate(String account, double inAmount, double outAmount) {
-      aggregatedData.putIfAbsent(account, () => [0.0, 0.0]);
-      aggregatedData[account]![0] += inAmount;
-      aggregatedData[account]![1] += outAmount;
-    }
-
-    // 2. Aggregate Receipts
-    m.receiptsByAccount.forEach((account, amount) {
-      aggregate(account, amount, 0.0);
-    });
-
-    // 3. Aggregate Expenses
-    m.expensesByAccount.forEach((account, amount) {
-      aggregate(account, 0.0, amount);
-    });
-
-    // 4. Build the consolidated list of tiles
-    final List<Widget> combinedAccountTiles = aggregatedData.entries
-        .map(
-          (entry) => _DoubleEntryTile(
-            account: entry.key,
-            inAmount: entry.value[0],
-            outAmount: entry.value[1],
-          ),
-        )
-        .toList();
-
-    // 5. Sort the list by account name
-    combinedAccountTiles.sort((a, b) {
-      final titleA = (a as _DoubleEntryTile).account;
-      final titleB = (b as _DoubleEntryTile).account;
-      return titleA.compareTo(titleB);
-    });
-
-    // 6. Define the Combined Footer. If there are tiles, show totals; otherwise, show 'No transactions' message.
-    final Widget combinedFooter = combinedAccountTiles.isEmpty
-        ? const Text('No transactions recorded for this month.')
-        : _buildDoubleEntryFooter(m.receipts, m.expenses);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Date Header
-        Padding(
-          padding: const EdgeInsets.only(left: 20, top: 12, bottom: 8),
-          child: Text(
-            DateFormat('MMMM yyyy').format(widget.date),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: CupertinoColors.secondaryLabel,
-            ),
-          ),
-        ),
-
-        // 4. Summary Card (Balance Overview)
-        CupertinoListSection.insetGrouped(
-          header: const Text('Balance Overview'),
-          children: [
-            _summaryTile(
-              'Opening Balance',
-              m.openingBalance,
-              icon: CupertinoIcons.arrow_down_right,
-            ),
-            _summaryTile(
-              'Total Receipts',
-              m.receipts,
-              color: CupertinoColors.systemGreen,
-              icon: CupertinoIcons.plus_circle_fill,
-            ),
-            _summaryTile(
-              'Total Expenses',
-              m.expenses,
-              color: CupertinoColors.systemRed,
-              icon: CupertinoIcons.minus_circle_fill,
-            ),
-            _summaryTile(
-              'Closing Balance',
-              m.closingBalance,
-              bold: true,
-              icon: CupertinoIcons.creditcard_fill,
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-
-        // 5. Chart Header & Widget
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Receipts vs Expenses',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(height: 240, child: _buildCupertinoStyleBarChart(m)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 28),
-
-        // 6. COMBINED Account Movements (Double-Entry Style)
-        CupertinoListSection.insetGrouped(
-          // Header row to label the columns
-          header: _buildDoubleEntryHeader(context),
-          // Pass the new footer widget
-          footer: combinedFooter,
-          children: combinedAccountTiles,
-        ),
-      ],
-    );
-  }
-
-  // ─────────────────────────────────────
-  // NEW WIDGET: Footer for Double Entry Columns
-  // ─────────────────────────────────────
-  Widget _buildDoubleEntryFooter(double totalIn, double totalOut) {
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'en_IN',
-      symbol: '₹',
-      decimalDigits: 2,
-    );
-
-    return Padding(
-      // Padding matches the standard list section footer padding
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 10, bottom: 10),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Divider for visual separation from the last tile
-          Divider(
-            height: 1,
-            color: CupertinoColors.separator.resolveFrom(context),
-            indent: 0,
-            endIndent: 0,
+          _row(context, "Opening Balance", summary.openingBalance),
+          const Divider(),
+          _row(
+            context,
+            "New Income",
+            summary.receipts,
+            color: CupertinoColors.activeGreen,
           ),
-          const SizedBox(height: 8),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Total Label
-              const Expanded(
-                child: Text(
-                  'TOTAL',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-              ),
-
-              // Total IN (Receipts)
-              SizedBox(
-                width: 80, // Match column width
-                child: Text(
-                  currencyFormatter.format(totalIn),
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: CupertinoColors.systemGreen,
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 8), // Padding
-              // Total OUT (Expenses)
-              SizedBox(
-                width: 80, // Match column width
-                child: Text(
-                  currencyFormatter.format(totalOut),
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: CupertinoColors.systemRed,
-                  ),
-                ),
-              ),
-            ],
+          const Divider(),
+          _row(
+            context,
+            "Total Income",
+            totalIncome,
+            color: CupertinoColors.activeGreen,
           ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────
-  // New Header for Double Entry Columns (Slight adjustment for alignment)
-  // ─────────────────────────────────────
-  Widget _buildDoubleEntryHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 15, right: 20, bottom: 5, top: 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Expanded(
-            child: Text(
-              'PARTICULARS (Account)',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: CupertinoColors.secondaryLabel,
-              ),
-            ),
+          const Divider(),
+          _row(
+            context,
+            "Total Expenditure",
+            summary.expenses,
+            color: CupertinoColors.systemRed,
           ),
-          SizedBox(
-            width: 80,
-            child: Text(
-              'IN (₹)',
-              textAlign: TextAlign.right, // Align right to match the amount
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: CupertinoColors.systemGreen,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 80,
-            child: Text(
-              'OUT (₹)',
-              textAlign: TextAlign.right, // Align right to match the amount
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: CupertinoColors.systemRed,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────
-  // Reusable List Tiles and Chart (omitted for brevity)
-  // ─────────────────────────────────────
-  Widget _summaryTile(
-    String title,
-    double amount, {
-    Color? color,
-    bool bold = false,
-    IconData? icon,
-  }) {
-    final effectiveColor = amount < 0 && !bold
-        ? CupertinoColors.systemRed
-        : color;
-
-    return CupertinoListTile(
-      leading: icon != null
-          ? Icon(icon, color: effectiveColor ?? CupertinoColors.systemBlue)
-          : null,
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
-        ),
-      ),
-      trailing: Text(
-        '₹${amount.toStringAsFixed(2)}',
-        style: TextStyle(
-          color: effectiveColor,
-          fontWeight: bold ? FontWeight.bold : FontWeight.w600,
-          fontSize: 17,
-        ),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────
-  // Bar Chart with enhanced production UI
-  // ─────────────────────────────────────
-  Widget _buildCupertinoStyleBarChart(MonthlyCashSummary m) {
-    // Determine the max Y value for the chart's scale
-    final double maxYValue =
-        (m.receipts > m.expenses ? m.receipts : m.expenses) * 1.2;
-
-    // Use a formatter for clean currency display on the Y-axis
-    final currencyFormatter = NumberFormat.compactSimpleCurrency(
-      locale: 'en_IN',
-      name: '₹',
-    );
-
-    return BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.spaceAround,
-        maxY: maxYValue > 0
-            ? maxYValue
-            : 100, // Ensure maxY is at least 100 if data is zero
-        // 1. Enable Tooltips for interactivity (essential for production)
-        barTouchData: BarTouchData(
-          enabled: true,
-          touchTooltipData: BarTouchTooltipData(
-            // Use system background for tooltips
-            // tooltipBgColor: CupertinoColors.systemGrey.withOpacity(0.9),
-            tooltipMargin: 8,
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              // Show the exact formatted amount in the tooltip
-              final amount = rod.toY;
-              return BarTooltipItem(
-                currencyFormatter.format(amount),
-                const TextStyle(
-                  color: CupertinoColors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              );
-            },
-          ),
-        ),
-
-        // 2. Titles Data (Axis Labels)
-        titlesData: FlTitlesData(
-          show: true,
-          // Left Titles (Y-Axis) - Show numerical scale
-          leftTitles: AxisTitles(
-            //  drawBehindEverything: true,
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 50, // Give space for labels
-              getTitlesWidget: (value, meta) {
-                // Only show labels for common intervals (e.g., quarters)
-                if (value == meta.max || value == meta.min || value == 0) {
-                  return const Text('');
-                }
-
-                // Show 4 intermediate labels
-                final double interval = (meta.max - meta.min) / 4;
-                if ((value % interval) < 1.0) {
-                  // Check if value is close to an interval mark
-                  return SideTitleWidget(
-                    meta: meta,
-                    space: 8,
-                    child: Text(
-                      currencyFormatter.format(value),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: CupertinoColors.secondaryLabel,
-                      ),
-                    ),
-                  );
-                }
-                return const Text('');
-              },
-            ),
-          ),
-          // Hide Top and Right Axis
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-
-          // Bottom Titles (X-Axis) - Receipts/Expenses labels
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 32,
-              getTitlesWidget: (value, meta) {
-                final text = value.toInt() == 0 ? 'Receipts' : 'Expenses';
-                final color = value.toInt() == 0
-                    ? CupertinoColors.systemGreen
-                    : CupertinoColors.systemRed;
-                return SideTitleWidget(
-                  meta: meta,
-                  space: 8,
-                  child: Text(
-                    text,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-
-        // 3. Grid Data - Add subtle horizontal lines for context
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          drawHorizontalLine: true,
-          getDrawingHorizontalLine: (value) {
-            return FlLine(
-              color: CupertinoColors.separator.withOpacity(0.6),
-              strokeWidth: 0.5,
-              dashArray: [5, 5],
-            );
-          },
-        ),
-
-        // 4. Border Data - Add a strong line at the bottom (x=0)
-        borderData: FlBorderData(
-          show: true,
-          border: Border(
-            bottom: BorderSide(color: CupertinoColors.separator, width: 1),
-          ),
-        ),
-
-        // 5. Bar Groups (Keep colors/data mapping, improve labels)
-        barGroups: [
-          // Receipts
-          BarChartGroupData(
-            x: 0,
-            barRods: [
-              BarChartRodData(
-                toY: m.receipts,
-                color: CupertinoColors.systemGreen.withOpacity(0.85),
-                width: 40, // Slightly wider bars
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(8),
-                ),
-                // Show value label on top of the bar
-                rodStackItems: [
-                  BarChartRodStackItem(
-                    0,
-                    m.receipts,
-                    CupertinoColors.systemGreen.withOpacity(0.85),
-                    //  BorderSide.none,
-                  ),
-                ],
-
-                // Add title to show amount on top
-              ),
-            ],
-          ),
-          // Expenses
-          BarChartGroupData(
-            x: 1,
-            barRods: [
-              BarChartRodData(
-                toY: m.expenses,
-                color: CupertinoColors.systemRed.withOpacity(0.85),
-                width: 40, // Slightly wider bars
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(8),
-                ),
-                rodStackItems: [
-                  BarChartRodStackItem(
-                    0,
-                    m.expenses,
-                    CupertinoColors.systemRed.withOpacity(0.85),
-                    //  BorderSide.none,
-                  ),
-                ],
-              ),
-            ],
+          const Divider(),
+          _row(
+            context,
+            "Closing Balance",
+            summary.closingBalance,
+            color: summary.closingBalance >= 0
+                ? CupertinoColors.activeBlue
+                : CupertinoColors.systemRed,
           ),
         ],
       ),
@@ -620,88 +106,426 @@ class _MonthlyReportScreenState extends ConsumerState<MonthlyReportScreen> {
   }
 }
 
-// ─────────────────────────────────────
-// WIDGET: Double Entry Custom Tile (Modified text size/alignment for better spacing)
-// ─────────────────────────────────────
+//final summaryAsync = ref.watch(monthlySummaryProvider(selectedMonth));
+
+// summaryAsync.when(
+//   data: (summary) => AccountSummaryCard(summary: summary),
+//   loading: () => const Padding(
+//     padding: EdgeInsets.all(24),
+//     child: CupertinoActivityIndicator(),
+//   ),
+//   error: (_, __) => const SizedBox(),
+// ),
+
+// ------------------------------------------------------------
+// MODELS
+// ------------------------------------------------------------
+class AccountNode {
+  final String id;
+  final String name;
+  final String? parentId;
+
+  AccountNode({required this.id, required this.name, this.parentId});
+}
+
+class AccountTotal {
+  double receipts = 0;
+  double expenses = 0;
+}
+
+// ------------------------------------------------------------
+// PROVIDERS
+// ------------------------------------------------------------
+
+/// toggle expand / collapse per parent
+final expandedAccountsProvider = StateProvider<Set<String>>((ref) => {});
+
+/// toggle show sub-accounts
+final showSubAccountsProvider = StateProvider<bool>((ref) => true);
+
+/// fetch accounts tree
+final accountsTreeProvider = FutureProvider<List<AccountNode>>((ref) async {
+  final res = await Supabase.instance.client
+      .from('accounts')
+      .select('id, name, parent_account_id')
+      .eq('year', ref.watch(yearProvider));
+
+  return res
+      .map<AccountNode>(
+        (e) => AccountNode(
+          id: e['id'],
+          name: e['name'],
+          parentId: e['parent_account_id'],
+        ),
+      )
+      .toList();
+});
+
+/// monthly totals grouped by account id
+final monthlyAccountTotalsProvider =
+    FutureProvider.family<Map<String, AccountTotal>, DateTime>((
+      ref,
+      date,
+    ) async {
+      final supabase = Supabase.instance.client;
+
+      final from = DateTime(date.year, date.month, 1);
+      final to = DateTime(date.year, date.month + 1, 0);
+
+      final rows = await supabase
+          .from('entries')
+          .select('type, amount, account_id')
+          .gte('date', from.toIso8601String())
+          .lte('date', to.toIso8601String());
+
+      final map = <String, AccountTotal>{};
+
+      for (final e in rows) {
+        final id = e['account_id'] as String;
+        final amt = (e['amount'] as num).toDouble();
+
+        map.putIfAbsent(id, () => AccountTotal());
+
+        if (e['type'] == 'debit') {
+          map[id]!.receipts += amt;
+        } else {
+          map[id]!.expenses += amt;
+        }
+      }
+
+      return map;
+    });
+
+// ------------------------------------------------------------
+// SCREEN
+// ------------------------------------------------------------
+
+class MonthlyReportScreen extends ConsumerWidget {
+  final DateTime month;
+  const MonthlyReportScreen({super.key, required this.month});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showSubs = ref.watch(showSubAccountsProvider);
+    final expanded = ref.watch(expandedAccountsProvider);
+
+    final accountsAsync = ref.watch(accountsTreeProvider);
+    final totalsAsync = ref.watch(monthlyAccountTotalsProvider(month));
+
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('Monthly Report'),
+        trailing: CupertinoSwitch(
+          value: showSubs,
+          onChanged: (v) =>
+              ref.read(showSubAccountsProvider.notifier).state = v,
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            AccountSummaryCard(
+              summary: ref
+                  .watch(monthlySummaryProvider(month))
+                  .whenData((value) => value)
+                  .value!,
+            ),
+            const Divider(),
+            // ------------------------------------------------------------
+            Expanded(
+              child: accountsAsync.when(
+                data: (accounts) => totalsAsync.when(
+                  data: (totals) {
+                    final parents = accounts
+                        .where((a) => a.parentId == null)
+                        .toList();
+
+                    return ListView.builder(
+                      itemCount: parents.length,
+                      itemBuilder: (_, i) {
+                        final parent = parents[i];
+                        final isOpen = expanded.contains(parent.id);
+
+                        final children = accounts
+                            .where((a) => a.parentId == parent.id)
+                            .toList();
+
+                        final parentTotal = _aggregate(
+                          parent.id,
+                          children,
+                          totals,
+                        );
+
+                        return Column(
+                          children: [
+                            _DoubleEntryTile(
+                              account: parent.name,
+                              inAmount: parentTotal.receipts,
+                              outAmount: parentTotal.expenses,
+                              totalIn: parentTotal.receipts,
+                              totalOut: parentTotal.expenses,
+                              hasChildren: children.isNotEmpty,
+                              expanded: isOpen,
+                              onTap: () {
+                                final set = {...expanded};
+                                isOpen
+                                    ? set.remove(parent.id)
+                                    : set.add(parent.id);
+                                ref
+                                        .read(expandedAccountsProvider.notifier)
+                                        .state =
+                                    set;
+                              },
+                            ),
+                            // _ParentTile(
+                            //   name: parent.name,
+                            //   total: parentTotal,
+                            //   expanded: isOpen,
+                            //   hasChildren: children.isNotEmpty,
+                            //   onTap: () {
+                            //     final set = {...expanded};
+                            //     isOpen
+                            //         ? set.remove(parent.id)
+                            //         : set.add(parent.id);
+                            //     ref
+                            //             .read(expandedAccountsProvider.notifier)
+                            //             .state =
+                            //         set;
+                            //   },
+                            // ),
+                            if (showSubs && isOpen)
+                              ...children.map(
+                                (c) => _ChildTile(
+                                  name: c.name,
+                                  total: totals[c.id],
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CupertinoActivityIndicator()),
+                  error: (_, __) =>
+                      const Center(child: Text('Error loading totals')),
+                ),
+                loading: () =>
+                    const Center(child: CupertinoActivityIndicator()),
+                error: (_, __) =>
+                    const Center(child: Text('Error loading accounts')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  AccountTotal _aggregate(
+    String parentId,
+    List<AccountNode> children,
+    Map<String, AccountTotal> totals,
+  ) {
+    final total = AccountTotal();
+
+    if (totals[parentId] != null) {
+      total.receipts += totals[parentId]!.receipts;
+      total.expenses += totals[parentId]!.expenses;
+    }
+
+    for (final c in children) {
+      if (totals[c.id] != null) {
+        total.receipts += totals[c.id]!.receipts;
+        total.expenses += totals[c.id]!.expenses;
+      }
+    }
+
+    return total;
+  }
+}
+
+// ------------------------------------------------------------
+// UI TILES
+// ------------------------------------------------------------
+
+class _ParentTile extends StatelessWidget {
+  final String name;
+  final AccountTotal total;
+  final bool expanded;
+  final bool hasChildren;
+  final VoidCallback onTap;
+
+  const _ParentTile({
+    required this.name,
+    required this.total,
+    required this.expanded,
+    required this.hasChildren,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoListTile(
+      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(
+        'In: ₹${total.receipts.toStringAsFixed(2)}  Out: ₹${total.expenses.toStringAsFixed(2)}',
+      ),
+      trailing: hasChildren
+          ? Icon(
+              expanded
+                  ? CupertinoIcons.chevron_down
+                  : CupertinoIcons.chevron_right,
+            )
+          : null,
+      onTap: hasChildren ? onTap : null,
+    );
+  }
+}
+
+class _ChildTile extends StatelessWidget {
+  final String name;
+  final AccountTotal? total;
+
+  const _ChildTile({required this.name, this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 32),
+      child: CupertinoListTile(
+        title: Text(name),
+        subtitle: Text(
+          'In: ₹${(total?.receipts ?? 0).toStringAsFixed(2)}  Out: ₹${(total?.expenses ?? 0).toStringAsFixed(2)}',
+        ),
+      ),
+    );
+  }
+}
+
 class _DoubleEntryTile extends StatelessWidget {
   final String account;
-  final double inAmount; // Receipts / Debit to Cash
-  final double outAmount; // Expenses / Credit from Cash
+  final double inAmount;
+  final double outAmount;
+  final double totalIn;
+  final double totalOut;
+
+  final int indentLevel; // 0 = parent, 1 = child
+  final VoidCallback onTap;
+  final bool expanded;
+  final bool hasChildren;
 
   const _DoubleEntryTile({
     required this.account,
     required this.inAmount,
     required this.outAmount,
+    required this.totalIn,
+    required this.totalOut,
+    this.indentLevel = 0,
+    required this.expanded,
+    required this.onTap,
+    this.hasChildren = false,
   });
-
-  String _formatAmount(double amount) {
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'en_IN',
-      symbol: '₹',
-      decimalDigits: 2,
-    );
-    return amount == 0 ? '' : currencyFormatter.format(amount);
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 8,
-      ), // Reduced vertical padding
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // 1. Account Name (Particulars)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  account,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 15),
+    final inPct = _percent(inAmount, totalIn);
+    final outPct = _percent(outAmount, totalOut);
+
+    return GestureDetector(
+      onTap: hasChildren ? onTap : null,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20 + (indentLevel * 16), 8, 20, 8),
+        child: Row(
+          children: [
+            // ACCOUNT NAME
+            Expanded(
+              child: Text(
+                account,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: indentLevel == 0
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                 ),
-              ],
-            ),
-          ),
-
-          // 2. IN Amount Column
-          SizedBox(
-            width: 80, // Fixed width for alignment
-            child: Text(
-              _formatAmount(inAmount),
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: inAmount > 0 ? FontWeight.w400 : FontWeight.normal,
-                color: inAmount > 0
-                    ? CupertinoColors.systemGreen
-                    : CupertinoColors.label,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
 
-          const SizedBox(width: 8), // Padding between columns
-          // 3. OUT Amount Column
-          SizedBox(
-            width: 80, // Fixed width for alignment
-            child: Text(
-              _formatAmount(outAmount),
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: outAmount > 0 ? FontWeight.w400 : FontWeight.normal,
-                color: outAmount > 0
-                    ? CupertinoColors.systemRed
-                    : CupertinoColors.label,
+            // IN COLUMN
+            SizedBox(
+              width: 90,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    inAmount == 0 ? '' : '₹${inAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: CupertinoColors.systemGreen,
+                    ),
+                  ),
+                  if (inAmount > 0)
+                    Text(
+                      _fmtPercent(inPct),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: CupertinoColors.secondaryLabel,
+                      ),
+                    ),
+                ],
               ),
             ),
-          ),
-        ],
+
+            const SizedBox(width: 8),
+
+            // OUT COLUMN
+            SizedBox(
+              width: 90,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    outAmount == 0 ? '' : '₹${outAmount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: CupertinoColors.systemRed,
+                    ),
+                  ),
+                  if (outAmount > 0)
+                    Text(
+                      _fmtPercent(outPct),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: CupertinoColors.secondaryLabel,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 6.0),
+              child: hasChildren
+                  ? Icon(
+                      expanded
+                          ? CupertinoIcons.chevron_down
+                          : CupertinoIcons.chevron_right,
+                      size: 16,
+                    )
+                  : SizedBox(width: 16),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+double _percent(double part, double total) {
+  if (total == 0) return 0;
+  return (part / total) * 100;
+}
+
+String _fmtPercent(double pct) {
+  return '${pct.toStringAsFixed(1)}%';
 }

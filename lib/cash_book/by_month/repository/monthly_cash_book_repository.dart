@@ -61,6 +61,7 @@ class CashbookRepository {
       receiptsByAccount: receiptsByAccount,
       expensesByAccount: expensesByAccount,
       closingBalance: (prevSummary + receipts) - expenses,
+      accountsById: {},
     );
   }
 

@@ -148,6 +148,7 @@ final entriesListProvider = FutureProvider((ref) async {
       .gte('date', '$yearPicked-01-01')
       .lt('date', '${yearPicked + 1}-01-01')
       .order('date', ascending: false);
+
   List<Map<String, dynamic>> entries = List<Map<String, dynamic>>.from(result);
 
   // -----------------------

@@ -17,7 +17,8 @@ final annualChartProvider = FutureProvider.family<List<MonthlyChartItem>, int>((
 
     list.add(
       MonthlyChartItem(
-        monthLabel: DateFormat('MMM').format(date), // Jan, Feb, Mar...
+        openingBalance: summary.openingBalance,
+        monthLabel: DateFormat('MMM').format(date),
         receipts: summary.receipts,
         expenses: summary.expenses,
         closingBalance: summary.closingBalance,
@@ -28,17 +29,17 @@ final annualChartProvider = FutureProvider.family<List<MonthlyChartItem>, int>((
   return list;
 });
 
-final monthlySummaryListProvider = FutureProvider<List<MonthlyCashSummary>>((
-  ref,
-) async {
-  final List<MonthlyCashSummary> list = [];
+// final monthlySummaryListProvider= FutureProvider<List<MonthlyCashSummary>>((
+//   ref,
+// ) async {
+//   final List<MonthlyCashSummary> list = [];
 
-  for (int i = 1; i <= 12; i++) {
-    final month = DateTime(DateTime.now().year, i, 1);
+//   for (int i = 1; i <= 12; i++) {
+//     final month = DateTime(DateTime.now().year, i, 1);
 
-    final item = await ref.watch(monthlySummaryProvider(month).future);
-    list.add(item);
-  }
+//     final item = await ref.watch(monthlySummaryProvider(month).future);
+//     list.add(item);
+//   }
 
-  return list;
-});
+//   return list;
+// });

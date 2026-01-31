@@ -12,6 +12,14 @@ import 'package:intl/intl.dart';
 import 'package:cashledger/cash_book/by_month/controller/monthly_summary_provider.dart';
 import 'package:cashledger/cash_book/by_month/model/monthly_cash_summary.dart';
 
+List<DateTime> generateMonths(int startYear) {
+  final endDate = DateTime(startYear, 12, 31); // FY end (India)
+  return List.generate(
+    12,
+    (i) => DateTime(endDate.year, endDate.month - i, 1),
+  ).reversed.toList();
+}
+
 // Define a common breakpoint for responsiveness
 const double kTabletBreakpoint = 800.0;
 
@@ -53,7 +61,7 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
     // Check for wide screen
     final isWideScreen = MediaQuery.of(context).size.width >= kTabletBreakpoint;
 
-    final summaryCard = _DashboardSummaryCard(summaryList: summaryList);
+    final summaryCard = _DashboardSummaryCard();
     final annualChart = SizedBox(
       height: 250,
       child: annualChartAsync.when(
@@ -89,7 +97,7 @@ class _CashbookDashboardState extends ConsumerState<CashbookDashboard> {
       child: CustomScrollView(
         slivers: [
           // Header Spacer
-          const SliverToBoxAdapter(child: SizedBox(height: 12)),
+          //   const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
           // Current Year Header
           SliverToBoxAdapter(
@@ -270,30 +278,25 @@ class _WideLayout extends StatelessWidget {
 // ------------------------------------------------------------
 // Refactored Summary Card
 // ------------------------------------------------------------
-class _DashboardSummaryCard extends StatelessWidget {
-  final List<AsyncValue<MonthlyCashSummary>> summaryList;
+class _DashboardSummaryCard extends ConsumerWidget {
+  const _DashboardSummaryCard({super.key});
 
-  const _DashboardSummaryCard({required this.summaryList});
-  // The method must now accept BuildContext as a parameter
   Widget _summaryRow(
     BuildContext context,
     String title,
     double value, {
     Color? color,
   }) {
-    // Check if the provided 'color' is a CupertinoDynamicColor instance.
-    // If it is, use it; otherwise, use the default logic.
-    final Color? providedColor = color;
-
     final Color effectiveColor;
 
-    if (providedColor is CupertinoDynamicColor) {
-      effectiveColor = providedColor.resolveFrom(context);
+    if (color is CupertinoDynamicColor) {
+      effectiveColor = color.resolveFrom(context);
     } else {
-      // Fallback or default color logic, resolved using context
-      effectiveColor = value >= 0
-          ? CupertinoColors.label.resolveFrom(context)
-          : CupertinoColors.systemRed.resolveFrom(context);
+      effectiveColor =
+          color ??
+          (value >= 0
+              ? CupertinoColors.label.resolveFrom(context)
+              : CupertinoColors.systemRed.resolveFrom(context));
     }
 
     final valueFormatter = NumberFormat('#,##0.00', 'en_US');
@@ -307,14 +310,13 @@ class _DashboardSummaryCard extends StatelessWidget {
             title,
             style: TextStyle(
               fontSize: 15,
-              // 'context' is now available here
               color: CupertinoColors.secondaryLabel.resolveFrom(context),
             ),
           ),
           Text(
             "₹${valueFormatter.format(value)}",
             style: TextStyle(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 16,
               color: effectiveColor,
             ),
@@ -325,20 +327,33 @@ class _DashboardSummaryCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    double totalReceipts = 0;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final months = generateMonths(ref.watch(yearProvider));
+
+    double openingBalance = 0;
+    double newReceipts = 0;
     double totalExpenses = 0;
 
-    for (var item in summaryList) {
-      item.whenData((m) {
-        totalReceipts += m.receipts;
-        totalExpenses += m.expenses;
+    bool openingCaptured = false;
+
+    for (final month in months) {
+      final summaryAsync = ref.watch(monthlySummaryProvider(month));
+
+      summaryAsync.whenData((summary) {
+        // First (earliest) month defines opening balance
+        if (!openingCaptured) {
+          openingBalance = summary.openingBalance;
+          openingCaptured = true;
+        }
+
+        newReceipts += summary.receipts;
+        totalExpenses += summary.expenses;
       });
     }
 
-    final balance = totalReceipts - totalExpenses;
+    final totalIncome = openingBalance + newReceipts;
+    final netBalance = totalIncome - totalExpenses;
 
-    // Resolve colors for the container background
     final cardBackgroundColor = CupertinoColors.systemBackground.resolveFrom(
       context,
     );
@@ -363,9 +378,29 @@ class _DashboardSummaryCard extends StatelessWidget {
         children: [
           _summaryRow(
             context,
-            "Total Receipts",
-            totalReceipts,
+            "Opening Balance",
+            openingBalance,
+            color: CupertinoColors.systemCyan,
+          ),
+          Divider(
+            height: 10,
+            color: CupertinoColors.separator.resolveFrom(context),
+          ),
+          _summaryRow(
+            context,
+            "New Incomes",
+            newReceipts,
             color: CupertinoColors.activeGreen,
+          ),
+          Divider(
+            height: 10,
+            color: CupertinoColors.separator.resolveFrom(context),
+          ),
+          _summaryRow(
+            context,
+            "Total Incomes",
+            totalIncome,
+            color: CupertinoColors.activeGreen.highContrastColor,
           ),
           Divider(
             height: 10,
@@ -384,8 +419,8 @@ class _DashboardSummaryCard extends StatelessWidget {
           _summaryRow(
             context,
             "Net Balance",
-            balance,
-            color: balance >= 0
+            netBalance,
+            color: netBalance >= 0
                 ? CupertinoColors.activeBlue
                 : CupertinoColors.systemRed,
           ),
