@@ -28,24 +28,7 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Data fetching logic remains the same
-    final grouped = ref.watch(groupedEntriesProvider);
-    final totals = ref.watch(monthlyTotalsProvider);
     final entriesAsync = ref.watch(entriesListProvider);
-    final entries = entriesAsync.asData?.value ?? [];
-
-    final totalReceipts = entries
-        .where((e) => e['type'] == 'debit')
-        .fold(0.0, (s, e) => s + (e['amount'] ?? 0).toDouble());
-    final totalExpenses = entries
-        .where((e) => e['type'] == 'credit')
-        .fold(0.0, (s, e) => s + (e['amount'] ?? 0).toDouble());
-    final balance =
-        // (totals.values.first['openingBalance'] ?? 0.0) +
-        totalReceipts - totalExpenses;
-    refesh() {
-      ref.refresh(entriesProvider);
-    }
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
@@ -57,7 +40,7 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
             CupertinoButton(
               padding: EdgeInsets.zero,
               child: const Icon(CupertinoIcons.refresh, size: 24),
-              onPressed: () => refesh(),
+              onPressed: () => ref.invalidate(entriesListProvider),
             ),
             CupertinoButton(
               padding: EdgeInsets.zero,
@@ -70,82 +53,102 @@ class _CashbookScreenState extends ConsumerState<CashbookScreen> {
           ],
         ),
       ),
-      child: CustomScrollView(
-        slivers: [
-          // SliverToBoxAdapter(
-          //   child: CashbookSummaryCard(
-          //     openingBalance: entries.isNotEmpty
-          //         ? (totals.values.first['openingBalance'] ?? 0.0)
-          //         : 0.0,
-          //     totalReceipts: totalReceipts,
-          //     totalExpenses: totalExpenses,
-          //     balance: balance,
-          //   ),
-          // ),
-
-          // 3. Search/Filter Bar
-          SliverToBoxAdapter(child: _buildSearchFilterBar(context, ref)),
-
-          // 4. Grouped List Items
-          for (final section in grouped.entries) ...[
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _MonthHeaderDelegate(
-                monthKey: section.key,
-                totals: totals[section.key]!,
-                height: 40, // Slightly reduced header height for compactness
-                monthLabel: _monthLabelFromKey(section.key),
-                entries: section.value,
+      child: entriesAsync.when(
+        loading: () => const Center(child: CupertinoActivityIndicator()),
+        error: (error, _) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(CupertinoIcons.exclamationmark_circle, size: 48,
+                  color: CupertinoColors.systemRed),
+              const SizedBox(height: 12),
+              Text('Failed to load entries',
+                  style: TextStyle(color: CupertinoColors.systemRed)),
+              const SizedBox(height: 8),
+              CupertinoButton(
+                onPressed: () => ref.invalidate(entriesListProvider),
+                child: const Text('Retry'),
               ),
-            ),
+            ],
+          ),
+        ),
+        data: (entries) => _buildContent(context, ref, entries),
+      ),
+    );
+  }
 
-            // 5. Use CupertinoListSection for grouping/better visual separation
-            SliverList(
-              delegate: SliverChildListDelegate([
-                CupertinoListSection(
-                  backgroundColor: CupertinoColors.systemGroupedBackground,
-                  children: [
-                    for (final e in section.value)
-                      CupertinoListTile(
-                        leading: Icon(
-                          e['type'] == 'debit'
-                              ? CupertinoIcons.arrow_down_circle_fill
-                              : CupertinoIcons.arrow_up_circle_fill,
+  Widget _buildContent(BuildContext context, WidgetRef ref,
+      List<Map<String, dynamic>> entries) {
+    final grouped = ref.watch(groupedEntriesProvider);
+    final totals = ref.watch(monthlyTotalsProvider);
+
+    if (entries.isEmpty) {
+      return const Center(
+        child: Text('No entries yet.\nTap + to add one.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: CupertinoColors.secondaryLabel)),
+      );
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: _buildSearchFilterBar(context, ref)),
+        for (final section in grouped.entries) ...[
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _MonthHeaderDelegate(
+              monthKey: section.key,
+              totals: totals[section.key] ?? const {},
+              height: 40,
+              monthLabel: _monthLabelFromKey(section.key),
+              entries: section.value,
+            ),
+          ),
+          SliverList(
+            delegate: SliverChildListDelegate([
+              CupertinoListSection(
+                backgroundColor: CupertinoColors.systemGroupedBackground,
+                children: [
+                  for (final e in section.value)
+                    CupertinoListTile(
+                      leading: Icon(
+                        e['type'] == 'debit'
+                            ? CupertinoIcons.arrow_down_circle_fill
+                            : CupertinoIcons.arrow_up_circle_fill,
+                        color: e['type'] == 'debit'
+                            ? CupertinoColors.activeGreen
+                            : CupertinoColors.destructiveRed,
+                      ),
+                      title: Text(
+                        e['description'] ?? 'No description',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      subtitle: Text(
+                        '${rowDateFormat.format(DateTime.parse(e['date']))} • ${e['accounts']?['name'] ?? 'Unknown'}',
+                      ),
+                      trailing: Text(
+                        '₹${(e['amount'] ?? 0).toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                           color: e['type'] == 'debit'
                               ? CupertinoColors.activeGreen
                               : CupertinoColors.destructiveRed,
                         ),
-                        title: Text(
-                          e['description'] ?? 'No description',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        subtitle: Text(
-                          '${rowDateFormat.format(DateTime.parse(e['date']))} • ${e['accounts']?['name'] ?? 'Unknown'}',
-                        ),
-                        trailing: Text(
-                          '₹${(e['amount'] ?? 0).toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: e['type'] == 'debit'
-                                ? CupertinoColors.activeGreen
-                                : CupertinoColors.destructiveRed,
-                          ),
-                        ),
-                        onTap: () => Navigator.push(
-                          context,
-                          CupertinoPageRoute(
-                            builder: (_) => AddEntryScreen(entry: e),
-                          ),
+                      ),
+                      onTap: () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                          builder: (_) => AddEntryScreen(entry: e),
                         ),
                       ),
-                  ],
-                ),
-              ]),
-            ),
-          ],
+                    ),
+                ],
+              ),
+            ]),
+          ),
         ],
-      ),
+      ],
     );
   }
 

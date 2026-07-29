@@ -10,7 +10,12 @@
       {
         "source": "**",
         "destination": "/index.html"
+      }, {
+        "source": "/login",
+        "function": "supabaseLogin"
       }
     ]
-  }
+  },
+  "functions": {}
+  
 }

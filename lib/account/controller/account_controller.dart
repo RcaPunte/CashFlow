@@ -11,8 +11,10 @@ final accountsListProvider = FutureProvider<List<AccountModel>>((ref) async {
 
     final year = ref.watch(yearProvider);
 
-    final res = await supabase.from('accounts').select().eq('year', year);
-    // .order('name');
+    final res = await supabase
+        .from('accounts')
+        .select()
+        .eq('year', year);
     final accountList = (res as List)
         .map((e) => AccountModel.fromMap(e as Map<String, dynamic>))
         .toList();

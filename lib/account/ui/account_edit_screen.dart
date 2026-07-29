@@ -42,11 +42,9 @@ class AccountEditScreen extends HookConsumerWidget {
               CupertinoButton.filled(
                 child: const Text("Save"),
                 onPressed: () async {
-                  final updated = AccountModel(
-                    id: account.id,
+                  final updated = account.copyWith(
                     name: name.text,
                     description: description.text,
-                    accountType: account.accountType,
                     limitAmount: limit.text.isEmpty
                         ? null
                         : double.parse(limit.text),

@@ -1,6 +1,7 @@
 import 'package:cashledger/auth/controller/auth_controller.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -15,40 +16,57 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
   Future<void> _signup() async {
     setState(() => loading = true);
-    final auth = ref.read(authServiceProvider);
     try {
-      final res = await auth.signUp(
-        emailCtrl.text.trim(),
-        passCtrl.text,
-        data: {'name': "Kima", 'org': "apple"},
+      await Supabase.instance.client.auth.signUp(
+        email: emailCtrl.text.trim(),
+        password: passCtrl.text,
       );
-      // res contains user/session info. If email confirmation required, session may be null.
-      _showMessage('Check your email for confirmation if required.');
+      if (mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (_) => CupertinoAlertDialog(
+            content: const Text('Check your email for confirmation if required.'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      }
     } catch (e) {
-      _showMessage('Signup failed: ${e.toString()}');
+      if (mounted) {
+        showCupertinoDialog(
+          context: context,
+          builder: (_) => CupertinoAlertDialog(
+            content: Text('Signup failed: ${e.toString()}'),
+            actions: [
+              CupertinoDialogAction(
+                child: const Text('OK'),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
   }
 
-  void _showMessage(String m) => showCupertinoDialog(
-    context: context,
-    builder: (_) => CupertinoAlertDialog(
-      content: Text(m),
-      actions: [
-        CupertinoDialogAction(
-          child: const Text('OK'),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ],
-    ),
-  );
+  @override
+  void dispose() {
+    emailCtrl.dispose();
+    passCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('Create account'),
+        middle: Text('Create Account'),
       ),
       child: SafeArea(
         child: Padding(
@@ -71,7 +89,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 onPressed: loading ? null : _signup,
                 child: loading
                     ? const CupertinoActivityIndicator()
-                    : const Text('Sign up'),
+                    : const Text('Sign Up'),
               ),
             ],
           ),

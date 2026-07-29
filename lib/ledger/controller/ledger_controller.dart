@@ -116,7 +116,7 @@ final accountListProvider = FutureProvider<List<AccountModel>>((ref) async {
   final accounts = (rawAccount).where((ac) => ac.parentId == null).toList();
   accounts.insert(
     0,
-    AccountModel(id: "", name: "All Accounts", accountType: "Both"),
+    AccountModel(id: "", name: "All Accounts", accountType: "Both", userId: ""),
   );
   return accounts;
 });

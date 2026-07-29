@@ -18,7 +18,7 @@ Future<void> showLogoutDialog(BuildContext context, WidgetRef ref) async {
           child: const Text("Logout"),
           onPressed: () async {
             Navigator.pop(context);
-            AuthService().signOut();
+          //  AuthService().signOut();
             // await ref.read(authProvider).logout();
 
             // if (context.mounted) {

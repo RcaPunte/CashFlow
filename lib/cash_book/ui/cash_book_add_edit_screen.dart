@@ -153,31 +153,15 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                   CupertinoButton(
                     child: const Text("Done"),
                     onPressed: () {
-                      // If no sub account, use main account
                       if (subAccounts.isNotEmpty) {
-                        selectedAccountId =
-                            subAccounts[selectedMain.id == selectedMain.id
-                                    ? 0
-                                    : 1]
-                                .id;
-                        selectedSubAccountId = subAccounts
-                            .firstWhere(
-                              (a) => a.id == selectedSubAccountId,
-                              orElse: () => AccountModel(
-                                id: "",
-                                name: 'Sub Account Missing',
-                                year: DateTime.now().year,
-                                parentId: null,
-                                accountType: '',
-                              ),
-                            )
-                            .id;
-                        log(selectedSubAccountId.toString());
+                        // Use the sub-account selected via picker, or default to first
+                        final subId = selectedSubAccountId ?? subAccounts.first.id;
+                        selectedAccountId = subId;
+                        selectedSubAccountId = subId;
                       } else {
                         selectedAccountId = selectedMain.id;
                         selectedSubAccountId = null;
                       }
-                      // selectedAccountId = selectedMain.id;
                       setState(() {});
                       Navigator.pop(context);
                     },
@@ -403,6 +387,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
           year: DateTime.now().year,
           parentId: null,
           accountType: '',
+          userId: '',
         ),
       );
 
@@ -415,6 +400,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
             year: DateTime.now().year,
             parentId: null,
             accountType: '',
+            userId: '',
           ),
         );
         return parent.name;
@@ -431,6 +417,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
             year: DateTime.now().year,
             parentId: null,
             accountType: '',
+            userId: '',
           ),
         )
         .name;
@@ -445,11 +432,11 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   @override
   Widget build(BuildContext context) {
     final accountsAsync = ref.watch(accountsListProvider);
-    final entriesNotifier = ref.read(entriesProvider);
+    final repo = ref.read(entriesRepositoryProvider);
 
     // Dynamic title
     final title = widget.entry == null ? "New Entry" : "Edit Entry";
-    final user = ref.watch(currentUserProvider);
+   // final user = ref.watch(currentUserProvider);
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: Text(title),
@@ -491,6 +478,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                           year: DateTime.now().year,
                           parentId: null,
                           accountType: '',
+                          userId: '',
                         ),
                       )
                       .name;
@@ -506,6 +494,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                           year: DateTime.now().year,
                           parentId: null,
                           accountType: '',
+                          userId: '',
                         ),
                       )
                       .name;
@@ -852,17 +841,22 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                                   };
 
                                   if (widget.entry == null) {
-                                    await entriesNotifier.addEntry(entryData);
+                                    await repo.addEntry(
+                                      date: date,
+                                      amount: amount,
+                                      type: type == 'receipt' ? 'debit' : 'credit',
+                                      description: descCtrl.text.trim(),
+                                      accountId: selectedAccountId!,
+                                      subAccountId: selectedSubAccountId ?? '',
+                                    );
                                     refesh();
                                   } else {
-                                    await entriesNotifier.updateEntry(
+                                    await repo.updateEntry(
                                       widget.entry!['id'],
                                       {
                                         'date': date.toIso8601String(),
                                         'amount': amount,
-                                        'type': type == 'receipt'
-                                            ? 'debit'
-                                            : 'credit', // Map back to DB type
+                                        'type': type == 'receipt' ? 'debit' : 'credit',
                                         'description': descCtrl.text.trim(),
                                         'account_id': selectedAccountId!,
                                       },

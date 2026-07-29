@@ -147,31 +147,34 @@ final monthlySummaryProvider =
       // ─────────────────────────────────────────────
       // 1️⃣ OPENING BALANCE
       // ─────────────────────────────────────────────
-      if (month == 1) {
-        // JANUARY → MANUAL OPENING BALANCE
-        final res = await supabase
-            .from('opening_balances')
-            .select('amount')
-            .eq('year', year);
 
-        for (final r in res) {
-          openingBalance += (r['amount'] as num).toDouble();
-        }
-      } else {
-        // SAME YEAR ONLY (SAFE)
-        final yearStart = DateTime(year, 1, 1);
+      // Always fetch the year's manually-set opening balance first
+      final obRes = await supabase
+          .from('opening_balances')
+          .select('amount')
+          .eq('year', year)
+          .maybeSingle();
 
-        final prevRows = await supabase
-            .from('entries')
-            .select('type, amount')
-            .gte('date', yearStart.toIso8601String())
-            .lt('date', monthFrom.toIso8601String());
+      final yearOpeningBalance = obRes != null
+          ? (obRes['amount'] as num).toDouble()
+          : 0.0;
 
-        for (final e in prevRows) {
-          final amt = (e['amount'] as num).toDouble();
-          openingBalance += e['type'] == 'debit' ? amt : -amt;
-        }
+      // Add all entries from Jan 1 up to (but not including) this month
+      final yearStart = DateTime(year, 1, 1);
+
+      final prevRows = await supabase
+          .from('entries')
+          .select('type, amount')
+          .gte('date', yearStart.toIso8601String())
+          .lt('date', monthFrom.toIso8601String());
+
+      for (final e in prevRows) {
+        final amt = (e['amount'] as num).toDouble();
+        openingBalance += e['type'] == 'debit' ? amt : -amt;
       }
+
+      // Add the manual year opening balance to the running total
+      openingBalance += yearOpeningBalance;
 
       // ─────────────────────────────────────────────
       // 2️⃣ LOAD ACCOUNTS (ONCE)
@@ -191,6 +194,7 @@ final monthlySummaryProvider =
             name: a['name'],
             parentId: a['parent_id'],
             accountType: a['account_type'],
+            userId: (a['user_id'] as String?) ?? '',
           ),
       };
 

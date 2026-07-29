@@ -87,20 +87,16 @@ class _AccountTreeNodeState extends State<AccountTreeNode> {
             widget.account.name,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: widget.account.isLocked
-                  ? CupertinoColors.systemGrey
-                  : CupertinoColors.label,
+              color: CupertinoColors.label,
             ),
           ),
 
           // trailing: widget.account.isLocked
           //     ? const Icon(CupertinoIcons.lock, size: 16)
           //     : const Icon(CupertinoIcons.chevron_right, size: 16),
-          onTap: widget.account.isLocked
-              ? null
-              : () {
-                  // open ledger / details
-                },
+          onTap: () {
+            // open ledger / details
+          },
         ),
 
         if (expanded)

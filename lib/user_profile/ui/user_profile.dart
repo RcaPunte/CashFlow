@@ -1,4 +1,5 @@
-import 'package:cashledger/auth/controller/auth_controller.dart';
+import 'package:cashledger/auth/auth_repository.dart';
+import 'package:cashledger/auth/controller/auth_controller.dart' hide currentUserProvider;
 import 'package:cashledger/auth/controller/widget/logout_button.dart';
 import 'package:cashledger/user_profile/controller/user_profile_provider.dart';
 import 'package:flutter/cupertino.dart';
@@ -36,12 +37,12 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
     try {
       final user = ref.read(currentUserProvider)!;
 
-      await ref.read(authServiceProvider).updateProfile({
-        'id': user.id,
-        'full_name': _nameCtrl.text.trim(),
-        'phone_no': _phoneCtrl.text.trim(),
-        'role': _roleCtrl.text.trim(),
-      });
+      // await ref.read(authServiceProvider).updateProfile({
+      //   'id': user.id,
+      //   'full_name': _nameCtrl.text.trim(),
+      //   'phone_no': _phoneCtrl.text.trim(),
+      //   'role': _roleCtrl.text.trim(),
+      // });
 
       if (mounted) {
         showCupertinoDialog(

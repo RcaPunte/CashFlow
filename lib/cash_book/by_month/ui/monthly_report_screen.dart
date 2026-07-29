@@ -1,6 +1,6 @@
 // Full working example: expandable/collapsible parent → child accounts
 // Tally / Zoho style
-import 'dart:html' as html;
+// import 'dart:html' as html;
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:cashledger/cash_book/by_month/controller/monthly_summary_provider.dart';
@@ -249,12 +249,13 @@ class MonthlyReportScreen extends ConsumerWidget {
         if (kIsWeb) {
           // 2. Web specific: Create XFile directly from memory bytes
           // Browsers don't have a "Temporary Directory" path
-          final blob = html.Blob([bytes]);
-          final url = html.Url.createObjectUrlFromBlob(blob);
-          final anchor = html.AnchorElement(href: url)
-            ..setAttribute("download", fileName)
-            ..click();
-          html.Url.revokeObjectUrl(url);
+          //TODO: The Share package's shareXFiles on web will trigger a download of the file. If you want to trigger an immediate download without using the Share package, you can use the following code instead:
+          // final blob = html.Blob([bytes]);
+          // final url = html.Url.createObjectUrlFromBlob(blob);
+          // final anchor = html.AnchorElement(href: url)
+          //   ..setAttribute("download", fileName)
+          //   ..click();
+          // html.Url.revokeObjectUrl(url);
           return XFile.fromData(bytes, name: fileName, mimeType: 'image/png');
         } else {
           // 3. Mobile specific: Keep your existing dart:io logic
@@ -463,6 +464,7 @@ class MonthlyReportScreen extends ConsumerWidget {
                                   parent.id,
                                   children,
                                   totals,
+                                  accounts,
                                 );
 
                                 // Skip empty parents
@@ -587,25 +589,33 @@ class MonthlyReportScreen extends ConsumerWidget {
     );
   }
 
+  /// Recursively sum an account + ALL its descendants at any depth
   AccountTotal _aggregate(
     String parentId,
     List<AccountNode> children,
     Map<String, AccountTotal> totals,
+    List<AccountNode> allAccounts,
+  ) {
+    return _aggregateRecursive(parentId, totals, allAccounts);
+  }
+
+  AccountTotal _aggregateRecursive(
+    String accountId,
+    Map<String, AccountTotal> totals,
+    List<AccountNode> allAccounts,
   ) {
     final total = AccountTotal();
-
-    if (totals[parentId] != null) {
-      total.receipts += totals[parentId]!.receipts;
-      total.expenses += totals[parentId]!.expenses;
+    // This account's own entries
+    if (totals[accountId] != null) {
+      total.receipts += totals[accountId]!.receipts;
+      total.expenses += totals[accountId]!.expenses;
     }
-
-    for (final c in children) {
-      if (totals[c.id] != null) {
-        total.receipts += totals[c.id]!.receipts;
-        total.expenses += totals[c.id]!.expenses;
-      }
+    // Recurse into all children (any depth)
+    for (final child in allAccounts.where((a) => a.parentId == accountId)) {
+      final childTotal = _aggregateRecursive(child.id, totals, allAccounts);
+      total.receipts += childTotal.receipts;
+      total.expenses += childTotal.expenses;
     }
-
     return total;
   }
 }

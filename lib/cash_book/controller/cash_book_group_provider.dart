@@ -25,48 +25,15 @@ final groupedEntriesProvider = Provider((ref) {
   return grouped;
 });
 
-/// Monthly totals provider
-// final monthlyTotalsProvider = Provider((ref) {
-//   final grouped = ref.watch(groupedEntriesProvider);
-
-//   final totals = <String, Map<String, double>>{};
-
-//   grouped.forEach((key, list) {
-//     double receipts = 0;
-//     double expenses = 0;
-
-//     for (var e in list) {
-//       final amt = (e['amount'] ?? 0).toDouble();
-//       if (e['type'] == 'debit') {
-//         receipts += amt;
-//       } else {
-//         expenses += amt;
-//       }
-//     }
-
-//     totals[key] = {
-//       'receipts': receipts,
-//       'expenses': expenses,
-//       'balance': receipts - expenses,
-//     };
-//   });
-
-//   return totals;
-// });
-
 final monthlyTotalsProvider = Provider((ref) {
   final grouped = ref.watch(groupedEntriesProvider);
   final yearOpeningAsync = ref.watch(yearOpeningBalanceProvider);
 
-  // If opening balance not loaded yet, return empty
   if (!yearOpeningAsync.hasValue) return <String, Map<String, double>>{};
 
   final yearOpeningBalance = yearOpeningAsync.value!;
   final totals = <String, Map<String, double>>{};
 
-  // --------------------------------------------------
-  // 1️⃣ Calculate receipts & expenses per month
-  // --------------------------------------------------
   grouped.forEach((key, list) {
     double receipts = 0;
     double expenses = 0;
@@ -88,14 +55,8 @@ final monthlyTotalsProvider = Provider((ref) {
     };
   });
 
-  // --------------------------------------------------
-  // 2️⃣ Sort months chronologically (ASC)
-  // --------------------------------------------------
   final sortedKeys = totals.keys.toList()..sort((a, b) => a.compareTo(b));
 
-  // --------------------------------------------------
-  // 3️⃣ Rolling balance with JANUARY OVERRIDE
-  // --------------------------------------------------
   double previousClosing = yearOpeningBalance;
 
   for (int i = 0; i < sortedKeys.length; i++) {
@@ -104,7 +65,6 @@ final monthlyTotalsProvider = Provider((ref) {
 
     final month = int.parse(key.split('-')[1]);
 
-    // JANUARY → manual opening balance
     if (month == 1) {
       monthData['openingBalance'] = yearOpeningBalance;
     } else {
@@ -121,46 +81,3 @@ final monthlyTotalsProvider = Provider((ref) {
 
   return totals;
 });
-
-// final monthlyTotalsProvider = Provider((ref) {
-//   final grouped = ref.watch(groupedEntriesProvider);
-
-//   final totals = <String, Map<String, double>>{};
-
-//   // Step 1: Calculate receipts and expenses per month
-//   grouped.forEach((key, list) {
-//     double receipts = 0;
-//     double expenses = 0;
-
-//     for (var e in list) {
-//       final amt = (e['amount'] ?? 0).toDouble();
-//       if (e['type'] == 'debit') {
-//         receipts += amt;
-//       } else {
-//         expenses += amt;
-//       }
-//     }
-
-//     totals[key] = {
-//       'receipts': receipts,
-//       'expenses': expenses,
-//       'openingBalance': 0, // placeholder, filled later
-//       'balance': receipts - expenses,
-//     };
-//   });
-
-//   // Step 2: Sort keys chronologically (YYYY-MM)
-//   final sortedKeys = totals.keys.toList()..sort((a, b) => a.compareTo(b));
-
-//   // Step 3: Calculate rolling balances
-//   double previousClosing = 0;
-//   for (final key in sortedKeys) {
-//     final monthData = totals[key]!;
-//     monthData['openingBalance'] = previousClosing;
-//     monthData['balance'] =
-//         previousClosing + monthData['receipts']! - monthData['expenses']!;
-//     previousClosing = monthData['balance']!;
-//   }
-
-//   return totals;
-// });

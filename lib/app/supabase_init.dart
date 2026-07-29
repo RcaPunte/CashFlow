@@ -1,11 +1,29 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AppSupabase {
+  static const _defaultUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+  );
+  static const _defaultAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+  );
+
   static Future<void> initialize() async {
+    final url = _defaultUrl;
+    final anonKey = _defaultAnonKey;
+
+    if (url.isEmpty || anonKey.isEmpty) {
+      throw Exception(
+        'Missing Supabase environment variables. '
+        'Pass them via --dart-define:\n'
+        'flutter run --dart-define=SUPABASE_URL=https://your-project.supabase.co '
+        '--dart-define=SUPABASE_ANON_KEY=your-anon-key',
+      );
+    }
+
     await Supabase.initialize(
-      url: 'https://xqpyswjocnbsfvmsjdqn.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxcHlzd2pvY25ic2Z2bXNqZHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjY3NjYsImV4cCI6MjA3OTc0Mjc2Nn0.YTl4Pf3cM0JmTa5t0I0pE5iKnUfHaGD_h5iXhP1Iy50',
+      url: url,
+      anonKey: anonKey,
     );
   }
 

@@ -218,7 +218,7 @@ import 'package:printing/printing.dart'; // Optional: Best for cross-platform PD
 
 // Change return type from Future<File> to Future<Uint8List>
 import 'dart:typed_data';
-import 'dart:html' as html;
+// import 'dart:html' as html;
 
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -429,16 +429,16 @@ Future<void> exportMonthlyPdfFromAccounts({
     ),
   );
 
-  // ───────── WEB DOWNLOAD ─────────
-  final bytes = await pdf.save();
-  final blob = html.Blob([bytes], 'application/pdf');
-  final url = html.Url.createObjectUrlFromBlob(blob);
+  // ───────── WEB DOWNLOAD ───────── //TODO: Move this to a separate function and call it from the UI layer after generating the PDF bytes. This keeps the PDF generation logic separate from platform-specific download logic.
+  // final bytes = await pdf.save();
+  // final blob = html.Blob([bytes], 'application/pdf');
+  // final url = html.Url.createObjectUrlFromBlob(blob);
 
-  html.AnchorElement(href: url)
-    ..setAttribute('download', 'cashbook_${summary.monthKey}.pdf')
-    ..click();
+  // html.AnchorElement(href: url)
+  //   ..setAttribute('download', 'cashbook_${summary.monthKey}.pdf')
+  //   ..click();
 
-  html.Url.revokeObjectUrl(url);
+  // html.Url.revokeObjectUrl(url);
 }
 
 Future<void> exportMonthlyPdfWeb(MonthlyCashSummary m) async {
@@ -586,14 +586,15 @@ Future<void> exportMonthlyPdfWeb(MonthlyCashSummary m) async {
   // ─────────────────────────────
   // WEB DOWNLOAD
   // ─────────────────────────────
-  final Uint8List bytes = await pdf.save();
+  //TODO: Move this to a separate function and call it from the UI layer after generating the PDF bytes. This keeps the PDF generation logic separate from platform-specific download logic.
+  // final Uint8List bytes = await pdf.save();
 
-  final blob = html.Blob([bytes], 'application/pdf');
-  final url = html.Url.createObjectUrlFromBlob(blob);
+  // final blob = html.Blob([bytes], 'application/pdf');
+  // final url = html.Url.createObjectUrlFromBlob(blob);
 
-  final anchor = html.AnchorElement(href: url)
-    ..setAttribute('download', 'cashbook_${m.monthKey}.pdf')
-    ..click();
+  // final anchor = html.AnchorElement(href: url)
+  //   ..setAttribute('download', 'cashbook_${m.monthKey}.pdf')
+  //   ..click();
 
-  html.Url.revokeObjectUrl(url);
+  // html.Url.revokeObjectUrl(url);
 }
