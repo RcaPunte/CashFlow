@@ -5,6 +5,7 @@ import 'package:cashledger/export/account_export.dart' show AccountExportUtils;
 import 'package:flutter/cupertino.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
 
 class AccountListScreen extends HookConsumerWidget {
   const AccountListScreen({super.key});
@@ -13,11 +14,17 @@ class AccountListScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final accountsAsync = ref.watch(accountControllerProvider);
     final totalsAsync = ref.watch(accountTotalsProvider);
+    final fmt = NumberFormat('#,##,###', 'en_IN');
 
     return CupertinoPageScaffold(
-      backgroundColor: CupertinoColors.systemGroupedBackground,
+      backgroundColor: const Color(0xFFF2F2F7),
       navigationBar: CupertinoNavigationBar(
-        middle: const Text("Accounts"),
+        backgroundColor: const Color(0xFFFFFFFF).withValues(alpha: 0.96),
+        middle: const Text('Accounts',
+            style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -27,7 +34,6 @@ class AccountListScreen extends HookConsumerWidget {
                 final accounts = accountsAsync.asData?.value ?? [];
                 final totals = totalsAsync.asData?.value ?? {};
                 if (accounts.isEmpty) return;
-
                 await AccountExportUtils.openExportSheet(
                   context: context,
                   totals: totals,
@@ -36,226 +42,442 @@ class AccountListScreen extends HookConsumerWidget {
               },
               child: const Icon(CupertinoIcons.square_arrow_up, size: 22),
             ),
+            const SizedBox(width: 4),
             CupertinoButton(
               padding: EdgeInsets.zero,
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF007AFF), Color(0xFF5856D6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF007AFF).withValues(alpha: 0.3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(CupertinoIcons.add, size: 18,
+                    color: CupertinoColors.white),
+              ),
               onPressed: () => context.push('/accounts/add'),
-              child: const Icon(CupertinoIcons.add, size: 22),
             ),
           ],
         ),
       ),
-
-      // ======================= BODY ==========================
       child: accountsAsync.when(
         loading: () =>
             const Center(child: CupertinoActivityIndicator(radius: 18)),
         error: (e, _) => Center(
-          child: Text(
-            "Error loading accounts: ${e.toString()}",
-            style: const TextStyle(color: CupertinoColors.systemRed),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF3B30).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(CupertinoIcons.exclamationmark_triangle,
+                    size: 28, color: Color(0xFFFF3B30)),
+              ),
+              const SizedBox(height: 16),
+              Text(e.toString().length > 60
+                  ? '${e.toString().substring(0, 60)}...'
+                  : e.toString(),
+                  style: const TextStyle(
+                      fontSize: 14, color: Color(0xFF8E8E93))),
+            ],
           ),
         ),
         data: (list) {
           if (list.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32.0),
-                child: Text(
-                  "No accounts found. Tap '+' to add a new account.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: CupertinoColors.systemGrey),
-                ),
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF007AFF), Color(0xFF5856D6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(CupertinoIcons.folder,
+                        size: 34, color: CupertinoColors.white),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('No Accounts Yet',
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1C1C1E))),
+                  const SizedBox(height: 6),
+                  const Text('Start by creating your first account',
+                      style: TextStyle(
+                          fontSize: 14, color: Color(0xFF8E8E93))),
+                ],
               ),
             );
           }
 
           final totals = totalsAsync.asData?.value ?? {};
 
-          final totalIn = totals.values.fold(0.0, (s, v) => s + (v['in'] ?? 0));
-          final totalOut = totals.values.fold(
-            0.0,
-            (s, v) => s + (v['out'] ?? 0),
-          );
+          final totalIn =
+              totals.values.fold(0.0, (s, v) => s + (v['in'] ?? 0));
+          final totalOut =
+              totals.values.fold(0.0, (s, v) => s + (v['out'] ?? 0));
           final net = totalIn - totalOut;
 
-          return ListView(
-            padding: const EdgeInsets.only(top: 12),
-            children: [
-              // Summary Section
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                child: _AccountSummaryCard(
-                  totalIn: totalIn,
-                  totalOut: totalOut,
-                  net: net,
+          return CustomScrollView(
+            slivers: [
+              // Top KPI cards
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _KpiCard(
+                          label: 'Total Income',
+                          amount: totalIn,
+                          color: const Color(0xFF34C759),
+                          icon: CupertinoIcons.arrow_down_left_circle_fill,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _KpiCard(
+                          label: 'Total Expenditure',
+                          amount: totalOut,
+                          color: const Color(0xFFFF3B30),
+                          icon: CupertinoIcons.arrow_up_right_circle_fill,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _KpiCard(
+                          label: 'Net',
+                          amount: net,
+                          color: net >= 0
+                              ? const Color(0xFF007AFF)
+                              : const Color(0xFFFF3B30),
+                          icon: CupertinoIcons.chart_bar_circle_fill,
+                          isBalance: true,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
+              // Account list
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Text('All Accounts',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1C1C1E)
+                              .withValues(alpha: 0.9),
+                          letterSpacing: -0.2)),
+                ),
+              ),
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (_, i) {
+                    final acc = list[i];
+                    final accIn = (totals[acc.id]?['in'] ?? 0);
+                    final accOut = (totals[acc.id]?['out'] ?? 0);
+                    final accNet = accIn - accOut;
+                    final isFirst = i == 0;
+                    final isLast = i == list.length - 1;
 
-              // Accounts List
-              CupertinoListSection.insetGrouped(
-                children: [
-                  for (final acc in list)
-                    CupertinoListTile(
-                      title: Text(acc.name, overflow: TextOverflow.ellipsis),
-                      subtitle: Text(
-                        "In: ₹${(totals[acc.id]?['in'] ?? 0).toStringAsFixed(2)}   "
-                        "Out: ₹${(totals[acc.id]?['out'] ?? 0).toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: CupertinoColors.systemGrey,
+                    return Container(
+                      margin: EdgeInsets.fromLTRB(
+                        12,
+                        isFirst ? 0 : 0,
+                        12,
+                        isLast ? 8 : 0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemBackground,
+                        borderRadius: BorderRadius.only(
+                          topLeft: isFirst
+                              ? const Radius.circular(14)
+                              : Radius.zero,
+                          topRight: isFirst
+                              ? const Radius.circular(14)
+                              : Radius.zero,
+                          bottomLeft: isLast
+                              ? const Radius.circular(14)
+                              : Radius.zero,
+                          bottomRight: isLast
+                              ? const Radius.circular(14)
+                              : Radius.zero,
+                        ),
+                        border: Border(
+                          left: BorderSide(
+                              color: CupertinoColors.separator
+                                  .withValues(alpha: 0.3),
+                              width: 0.5),
+                          right: BorderSide(
+                              color: CupertinoColors.separator
+                                  .withValues(alpha: 0.3),
+                              width: 0.5),
+                          bottom: isLast
+                              ? BorderSide(
+                                  color: CupertinoColors.separator
+                                      .withValues(alpha: 0.3),
+                                  width: 0.5)
+                              : BorderSide.none,
                         ),
                       ),
-                      trailing: Text(
-                        "₹${((totals[acc.id]?['in'] ?? 0) - (totals[acc.id]?['out'] ?? 0)).toStringAsFixed(2)}",
-                        style: TextStyle(
-                          color:
-                              ((totals[acc.id]?['in'] ?? 0) -
-                                      (totals[acc.id]?['out'] ?? 0)) >=
-                                  0
-                              ? CupertinoColors.activeGreen
-                              : CupertinoColors.destructiveRed,
-                          fontWeight: FontWeight.w600,
+                      child: CupertinoButton(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
+                        borderRadius: BorderRadius.zero,
+                        onPressed: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/accounts/edit',
+                            arguments: acc,
+                          );
+                        },
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFF007AFF),
+                                    Color(0xFF5856D6)
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius:
+                                    BorderRadius.circular(12),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  acc.name.isNotEmpty
+                                      ? acc.name[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: CupertinoColors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    acc.name,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1C1C1E),
+                                      letterSpacing: -0.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      _miniStat(
+                                        'Income',
+                                        accIn,
+                                        const Color(0xFF34C759),
+                                      ),
+                                      const SizedBox(
+                                          width: 14),
+                                      _miniStat(
+                                        'Expense',
+                                        accOut,
+                                        const Color(
+                                            0xFFFF3B30),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '₹ ${fmt.format(accNet.round())}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: accNet >= 0
+                                        ? const Color(0xFF34C759)
+                                        : const Color(0xFFFF3B30),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Balance',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: const Color(0xFF8E8E93)
+                                        .withValues(alpha: 0.8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                                CupertinoIcons.chevron_right,
+                                size: 14,
+                                color: Color(0xFFC7C7CC)),
+                          ],
                         ),
                       ),
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/accounts/edit',
-                          arguments: acc,
-                        );
-                      },
-                    ),
-                ],
+                    );
+                  },
+                  childCount: list.length,
+                ),
               ),
+              const SliverToBoxAdapter(
+                  child: SizedBox(height: 20)),
             ],
           );
         },
       ),
     );
   }
-}
 
-// ======================= SUMMARY CARD ==========================
-class _AccountSummaryCard extends StatelessWidget {
-  final double totalIn;
-  final double totalOut;
-  final double net;
-
-  const _AccountSummaryCard({
-    required this.totalIn,
-    required this.totalOut,
-    required this.net,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemGroupedBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: CupertinoColors.separator.withOpacity(0.4)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _buildStat('Total In', totalIn, CupertinoColors.activeGreen),
-          _buildStat('Total Out', totalOut, CupertinoColors.destructiveRed),
-          _buildStat('Net', net, CupertinoColors.activeBlue),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStat(String label, double value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _miniStat(String label, double value, Color color) {
+    final fmt = NumberFormat('#,##,##0', 'en_IN');
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: TextStyle(fontSize: 13, color: color)),
-        const SizedBox(height: 4),
-        Text(
-          '₹${value.toStringAsFixed(2)}',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
+        Text('$label: ',
+            style: const TextStyle(
+                fontSize: 12, color: Color(0xFF8E8E93))),
+        Text('₹ ${fmt.format(value)}',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color)),
       ],
     );
   }
 }
 
-// class AccountListScreen extends HookConsumerWidget {
-//   const AccountListScreen({super.key});
+// ============================================================
+// KPI CARD (reused)
+// ============================================================
+class _KpiCard extends StatelessWidget {
+  final String label;
+  final double amount;
+  final Color color;
+  final IconData icon;
+  final bool isBalance;
 
-//   @override
-//   Widget build(BuildContext context, WidgetRef ref) {
-//     final accountsAsync = ref.watch(accountControllerProvider);
+  const _KpiCard({
+    required this.label,
+    required this.amount,
+    required this.color,
+    required this.icon,
+    this.isBalance = false,
+  });
 
-//     return CupertinoPageScaffold(
-//       navigationBar: CupertinoNavigationBar(
-//         middle: const Text("Accounts"),
-//         trailing: CupertinoButton(
-//           padding: EdgeInsets.zero,
-//           onPressed: () => context.push('/accounts/add'),
-//           child: const Icon(CupertinoIcons.add, size: 22),
-//         ),
-//       ),
-//       backgroundColor: CupertinoColors.systemGroupedBackground,
-
-//       child: accountsAsync.when(
-//         loading: () =>
-//             const Center(child: CupertinoActivityIndicator(radius: 18)),
-//         error: (e, _) => Center(
-//           child: Text(
-//             "Error loading accounts: ${e.toString()}",
-//             style: const TextStyle(color: CupertinoColors.systemRed),
-//           ),
-//         ),
-//         data: (list) {
-//           if (list.isEmpty) {
-//             return const Center(
-//               child: Padding(
-//                 padding: EdgeInsets.all(32.0),
-//                 child: Text(
-//                   "No accounts found. Tap '+' to add a new account.",
-//                   textAlign: TextAlign.center,
-//                   style: TextStyle(color: CupertinoColors.systemGrey),
-//                 ),
-//               ),
-//             );
-//           }
-
-//           // 🛠️ FIX APPLIED HERE: Wrap CupertinoListSection in a ListView
-//           return ListView(
-//             // Use a slight top padding to give space below the navigation bar
-//             padding: const EdgeInsets.only(top: 10),
-//             children: [
-//               CupertinoListSection.insetGrouped(
-//                 children: [
-//                   for (final acc in list)
-//                     CupertinoListTile(
-//                       title: Text(acc.name, overflow: TextOverflow.ellipsis),
-//                       trailing: const Icon(
-//                         CupertinoIcons.chevron_right,
-//                         size: 18,
-//                         color: CupertinoColors.systemGrey,
-//                       ),
-//                       onTap: () {
-//                         Navigator.push(
-//                           context,
-//                           CupertinoPageRoute(
-//                             builder: (_) => AccountEditScreen(account: acc),
-//                           ),
-//                         );
-//                       },
-//                     ),
-//                 ],
-//               ),
-//             ],
-//           );
-//         },
-//       ),
-//     );
-//   }
-// }
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: CupertinoColors.separator.withValues(alpha: 0.3),
+            width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF000000).withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 14, color: color),
+              ),
+              const Spacer(),
+              if (isBalance)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    amount >= 0 ? 'NET' : 'DEF',
+                    style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                        letterSpacing: 0.5),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF8E8E93),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: -0.1)),
+          const SizedBox(height: 2),
+          Text(
+            '₹ ${NumberFormat('#,##,###').format(amount.round())}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: color,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

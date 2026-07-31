@@ -29,6 +29,7 @@ Future<void> exportMonthlyPdf({
 
   String fmt(double v) => v == 0 ? '-' : currency.format(v);
 
+  // Build account rows from receiptsByAccount + expensesByAccount maps
   final Map<String, Map<String, double>> accountData = {};
 
   summary.receiptsByAccount.forEach((accId, amt) {

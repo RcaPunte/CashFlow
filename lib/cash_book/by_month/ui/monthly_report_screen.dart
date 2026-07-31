@@ -329,24 +329,17 @@ class MonthlyReportScreen extends ConsumerWidget {
               child: const Text('Export & Share as PDF'),
               onPressed: () async {
                 Navigator.pop(context);
-                final bytes = await exportMonthlyPdfWeb(
-                  ref.watch(monthlySummaryProvider(month)).value!,
-                );
-
-                // If you don't want to use the Printing package for the download:
-                // if (kIsWeb) {
-                //   await Printing.layoutPdf(onLayout: (format) => bytes);
-                // }
-                // final file = await exportMonthlyPdf(m);
-                // await Share.shareXFiles([XFile(file.path)]);
+                final summary =
+                    ref.watch(monthlySummaryProvider(month)).value;
+                if (summary == null) return;
+                await exportMonthlyPdf(summary: summary);
               },
             ),
             CupertinoActionSheetAction(
               child: const Text('Export & Share as Excel (XLSX)'),
               onPressed: () async {
                 Navigator.pop(context);
-                final file = await exportMonthlyExcel(m);
-                await Share.shareXFiles([XFile(file.path)]);
+                await exportMonthlyExcel(m);
               },
             ),
           ],

@@ -6,7 +6,7 @@ import 'package:cashledger/cash_book/ui/cash_book_add_edit_screen.dart';
 import 'package:cashledger/cash_book/ui/cash_book_list_screen.dart';
 import 'package:cashledger/home/home_screen.dart';
 import 'package:cashledger/ledger/ui/ledger_screen.dart';
-import 'package:cashledger/ledger/ui/widgets/ledger_details_pie.dart';
+import 'package:cashledger/ledger/ui/ledger_details_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 

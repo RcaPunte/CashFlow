@@ -1,16 +1,14 @@
 import 'package:cashledger/ledger/model/ledger_entry.dart';
-import 'package:cashledger/ledger/ui/widgets/ledger_details_pie.dart';
+import 'package:cashledger/ledger/ui/ledger_details_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 
 class LedgerRowWidget extends StatelessWidget {
   final LedgerEntry entry;
   final double runningBalance;
-  final Color bgColor;
 
   const LedgerRowWidget({
     super.key,
-    this.bgColor = CupertinoColors.systemBackground,
     required this.entry,
     required this.runningBalance,
   });
@@ -19,26 +17,21 @@ class LedgerRowWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDebit = entry.type == 'debit';
     final formatter = NumberFormat('#,##0.00', 'en_US');
+    final dateStr = DateFormat('MMM d').format(entry.date);
 
-    // Use resolved colors for dynamic dark/light mode support
     final debitColor = CupertinoColors.activeGreen.resolveFrom(context);
     final creditColor = CupertinoColors.systemRed.resolveFrom(context);
     final balanceColor = runningBalance >= 0
         ? CupertinoColors.label.resolveFrom(context)
-        : CupertinoColors.systemRed.resolveFrom(
-            context,
-          ); // Highlight negative balance
+        : CupertinoColors.systemRed.resolveFrom(context);
 
     return Container(
-      // Standard row height for list items
       height: 48,
       decoration: BoxDecoration(
-        color: CupertinoColors.systemBackground, // Ensure consistent background
+        color: CupertinoColors.systemBackground,
         border: Border(
           bottom: BorderSide(
-            color: CupertinoColors.separator.withOpacity(
-              0.6,
-            ), // Subtle separator
+            color: CupertinoColors.separator.withOpacity(0.6),
             width: 0.4,
           ),
         ),
@@ -47,7 +40,6 @@ class LedgerRowWidget extends StatelessWidget {
         padding: EdgeInsets.zero,
         borderRadius: BorderRadius.zero,
         onPressed: () {
-          // Navigate to the detail screen on tap
           Navigator.push(
             context,
             CupertinoPageRoute(
@@ -56,28 +48,21 @@ class LedgerRowWidget extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16.0,
-          ), // Consistent padding
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Row(
             children: [
-              // 1. Date (Fixed width)
+              // Date
               SizedBox(
-                width:
-                    MediaQuery.of(context).size.width * 0.15, // Adjusted width
+                width: 56,
                 child: Text(
-                  // Use shorter format for table row
-                  DateFormat(
-                    'MMM d',
-                  ).format(DateTime.parse(entry.date.toString())),
+                  dateStr,
                   style: const TextStyle(
                     fontSize: 12,
                     color: CupertinoColors.systemGrey,
                   ),
                 ),
               ),
-
-              // 2. Description (Expanded)
+              // Description
               Expanded(
                 child: Text(
                   entry.description ?? '',
@@ -88,12 +73,10 @@ class LedgerRowWidget extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(width: 8),
-
-              // 3. Debit Amount (Fixed width, Right aligned)
+              // Debit
               SizedBox(
-                width: MediaQuery.of(context).size.width * 0.18,
+                width: 72,
                 child: Text(
                   isDebit ? formatter.format(entry.amount) : '',
                   textAlign: TextAlign.right,
@@ -104,10 +87,9 @@ class LedgerRowWidget extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // 4. Credit Amount (Fixed width, Right aligned)
+              // Credit
               SizedBox(
-                width: MediaQuery.of(context).size.width * 0.18,
+                width: 72,
                 child: Text(
                   !isDebit ? formatter.format(entry.amount) : '',
                   textAlign: TextAlign.right,
@@ -118,10 +100,9 @@ class LedgerRowWidget extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // 5. Running Balance (Fixed width, Right aligned)
+              // Balance
               SizedBox(
-                width: MediaQuery.of(context).size.width * 0.20,
+                width: 80,
                 child: Text(
                   formatter.format(runningBalance),
                   textAlign: TextAlign.right,
@@ -141,102 +122,82 @@ class LedgerRowWidget extends StatelessWidget {
 }
 
 class LedgerRowHeaderWidget extends StatelessWidget {
-  final Color bgColor;
-  const LedgerRowHeaderWidget({
-    super.key,
-    this.bgColor = CupertinoColors.systemBackground,
-  });
+  const LedgerRowHeaderWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Standard row height for list items
       height: 48,
       decoration: BoxDecoration(
         color: CupertinoColors.activeBlue,
-        borderRadius: BorderRadius.only(
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(10),
           topRight: Radius.circular(10),
         ),
-        // Ensure consistent background
         border: Border(
           bottom: BorderSide(
-            color: CupertinoColors.separator.withOpacity(
-              0.6,
-            ), // Subtle separator
+            color: CupertinoColors.separator.withOpacity(0.6),
             width: 0.4,
           ),
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16.0,
-        ), // Consistent padding
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16.0),
         child: Row(
           children: [
-            // 1. Date (Fixed width)
             SizedBox(
-              width: MediaQuery.of(context).size.width * 0.15, // Adjusted width
+              width: 56,
               child: Text(
                 "Date",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: CupertinoColors.white,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-
-            // 2. Description (Expanded)
             Expanded(
               child: Text(
                 "Particulars",
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: CupertinoColors.white,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-
-            const SizedBox(width: 8),
-
-            // 3. Debit Amount (Fixed width, Right aligned)
+            SizedBox(width: 8),
             SizedBox(
-              width: MediaQuery.of(context).size.width * 0.18,
+              width: 72,
               child: Text(
                 "Receipts",
                 textAlign: TextAlign.right,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: CupertinoColors.white,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-
-            // 4. Credit Amount (Fixed width, Right aligned)
             SizedBox(
-              width: MediaQuery.of(context).size.width * 0.18,
+              width: 72,
               child: Text(
                 "Expenses",
                 textAlign: TextAlign.right,
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
                   color: CupertinoColors.white,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-
-            // 5. Running Balance (Fixed width, Right aligned)
             SizedBox(
-              width: MediaQuery.of(context).size.width * 0.20,
+              width: 80,
               child: Text(
                 "Balance",
                 textAlign: TextAlign.right,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: CupertinoColors.white,
                   fontWeight: FontWeight.w500,

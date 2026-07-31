@@ -1,0 +1,38 @@
+flutter run -d chrome \
+  --dart-define=SUPABASE_URL=https://xqpyswjocnbsfvmsjdqn.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxcHlzd2pvY25ic2Z2bXNqZHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjY3NjYsImV4cCI6MjA3OTc0Mjc2Nn0.YTl4Pf3cM0JmTa5t0I0pE5iKnUfHaGD_h5iXhP1Iy50
+
+
+cd /Users/dev/Documents/Develop/CashFlow/CashFlow && flutter build web --dart-define=SUPABASE_URL=https://xqpyswjocnbsfvmsjdqn.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxcHlzd2pvY25ic2Z2bXNqZHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjY3NjYsImV4cCI6MjA3OTc0Mjc2Nn0.YTl4Pf3cM0JmTa5t0I0pE5iKnUfHaGD_h5iXhP1Iy50 2>&1
+
+
+
+
+NEXT_PUBLIC_SUPABASE_URL=https://xqpyswjocnbsfvmsjdqn.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxcHlzd2pvY25ic2Z2bXNqZHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjY3NjYsImV4cCI6MjA3OTc0Mjc2Nn0.YTl4Pf3cM0JmTa5t0I0pE5iKnUfHaGD_h5iXhP1Iy50
+
+### Security note:
+
+The `launch.json` still contains the keys for local development convenience. For production CI/CD, pass these via your CI's secret management system rather than committing them to the repo
+
+##### Web Build Command for Firebase
+cd /Users/dev/Documents/Develop/CashFlow/CashFlow && flutter build web --dart-define=SUPABASE_URL=https://xqpyswjocnbsfvmsjdqn.supabase.co --dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxcHlzd2pvY25ic2Z2bXNqZHFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNjY3NjYsImV4cCI6MjA3OTc0Mjc2Nn0.YTl4Pf3cM0JmTa5t0I0pE5iKnUfHaGD_h5iXhP1Iy50 2>&1
+
+
+
+Since you're using __Supabase Auth__ (not Firebase Auth), this rewrite is not needed and causes a warning on deploy. I'd remove it to keep the config clean.
+
+### Remaining Tasks Completed
+
+1. ✅ Supabase keys extracted to `--dart-define` (cross-platform, works on web)
+2. ✅ Dead code removed across all auth/cash_book files
+3. ✅ `exportCashBookToExcel` amount parsing fixed
+4. ✅ Account picker always-true ternary bug fixed
+5. ✅ GoRouter unified with auth redirect guards
+6. ✅ `user_id` filtering added to all Supabase queries
+7. ✅ `StateNotifier` migrated to `FutureProvider` (Riverpod 3)
+8. ✅ Typed models retained where appropriate
+9. ✅ Firebase deployment working
+
+
+'dae942b7-4188-4283-8a90-1a1cc224b167'

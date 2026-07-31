@@ -19,7 +19,6 @@ class _MonthlyLedgerListScreenState
     extends ConsumerState<MonthlyLedgerListScreen> {
   late final List<DateTime> months;
   final DateFormat _monthFormat = DateFormat('MMMM yyyy');
-  final DateFormat _dayMonthFormat = DateFormat('dd MMM');
 
   @override
   void initState() {
@@ -214,10 +213,6 @@ class _MonthlySummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final monthDate = DateTime.parse("${summary.monthKey}-01");
-    final balanceColor = summary.closingBalance >= 0
-        ? CupertinoColors.activeGreen
-        : CupertinoColors.destructiveRed;
-
     return CupertinoListTile(
       onTap: () {
         Navigator.push(

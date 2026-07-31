@@ -1,44 +1,49 @@
-import 'package:cashledger/ledger/controller/leder_details_controller.dart';
+import 'package:cashledger/ledger/controller/ledger_details_controller.dart';
 import 'package:cashledger/ledger/model/ledger_entry.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class LedgerDetailPage extends ConsumerWidget {
+class LedgerDetailPage extends StatefulWidget {
   final String entryId;
 
   const LedgerDetailPage({super.key, required this.entryId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final supabase = Supabase.instance.client;
+  State<LedgerDetailPage> createState() => _LedgerDetailPageState();
+}
 
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: supabase
-          .from('ledger_entries')
-          .select('*, accounts(name)')
-          .eq('id', entryId)
-          .maybeSingle(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData)
-          return const Center(child: CupertinoActivityIndicator());
-        if (snapshot.hasError)
-          return Center(child: Text('Error loading entry'));
+class _LedgerDetailPageState extends State<LedgerDetailPage> {
+  final _controller = LedgerDetailController();
+  late Future<LedgerEntry?> _entryFuture;
 
-        final data = snapshot.data!;
-        final entry = LedgerEntry.fromMap(data);
+  @override
+  void initState() {
+    super.initState();
+    _entryFuture = _controller.getEntry(widget.entryId);
+  }
 
-        final isDebit = entry.type == 'debit';
-        final formatter = DateFormat('dd MMM yyyy');
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      navigationBar: CupertinoNavigationBar(middle: const Text('Ledger Detail')),
+      child: SafeArea(
+        child: FutureBuilder<LedgerEntry?>(
+          future: _entryFuture,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data == null) {
+              return snapshot.connectionState == ConnectionState.waiting
+                  ? const Center(child: CupertinoActivityIndicator())
+                  : const Center(child: Text('Entry not found'));
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
 
-        return CupertinoPageScaffold(
-          navigationBar: CupertinoNavigationBar(middle: Text('Ledger Detail')),
-          child: SafeArea(
-            child: Padding(
+            final entry = snapshot.data!;
+            final isDebit = entry.type == 'debit';
+            final formatter = DateFormat('dd MMM yyyy');
+
+            return SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,53 +77,10 @@ class LedgerDetailPage extends ConsumerWidget {
                   ),
                 ],
               ),
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 }
-
-// class LedgerDetailPage extends StatelessWidget {
-//   final String entryId;
-
-//   const LedgerDetailPage({super.key, required this.entryId});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return FutureBuilder(
-//       future: Supabase.instance.client
-//           .from("ledger")
-//           .select()
-//           .eq("id", entryId)
-//           .single(),
-//       builder: (context, snapshot) {
-//         if (!snapshot.hasData) {
-//           return const Scaffold(
-//             body: Center(child: CircularProgressIndicator()),
-//           );
-//         }
-
-//         final e = LedgerEntry.fromMap(snapshot.data as Map<String, dynamic>);
-
-//         return Scaffold(
-//           appBar: AppBar(title: const Text("Ledger Detail")),
-//           body: Padding(
-//             padding: const EdgeInsets.all(16),
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Text("Date: ${e.date}"),
-//                 Text("Account: ${e.accountId}"),
-//                 Text("Type: ${e.type}"),
-//                 Text("Amount: ${e.amount}"),
-//                 Text("Description: ${e.description ?? ''}"),
-//               ],
-//             ),
-//           ),
-//         );
-//       },
-//     );
-//   }
-// }
