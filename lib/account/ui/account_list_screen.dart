@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
+const double kTabletBreakpoint = 800.0;
+
 class AccountListScreen extends HookConsumerWidget {
   const AccountListScreen({super.key});
 
@@ -15,6 +17,7 @@ class AccountListScreen extends HookConsumerWidget {
     final accountsAsync = ref.watch(accountControllerProvider);
     final totalsAsync = ref.watch(accountTotalsProvider);
     final fmt = NumberFormat('#,##,###', 'en_IN');
+    final isWide = MediaQuery.of(context).size.width >= kTabletBreakpoint;
 
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFFF2F2F7),
@@ -73,7 +76,7 @@ class AccountListScreen extends HookConsumerWidget {
       ),
       child: accountsAsync.when(
         loading: () =>
-            const Center(child: CupertinoActivityIndicator(radius: 18)),
+            const Center(child: CupertinoActivityIndicator(radius: 20)),
         error: (e, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -89,11 +92,16 @@ class AccountListScreen extends HookConsumerWidget {
                     size: 28, color: Color(0xFFFF3B30)),
               ),
               const SizedBox(height: 16),
-              Text(e.toString().length > 60
-                  ? '${e.toString().substring(0, 60)}...'
-                  : e.toString(),
-                  style: const TextStyle(
-                      fontSize: 14, color: Color(0xFF8E8E93))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                    e.toString().length > 60
+                        ? '${e.toString().substring(0, 60)}...'
+                        : e.toString(),
+                    style: const TextStyle(
+                        fontSize: 14, color: Color(0xFF8E8E93)),
+                    textAlign: TextAlign.center),
+              ),
             ],
           ),
         ),
@@ -133,236 +141,251 @@ class AccountListScreen extends HookConsumerWidget {
           }
 
           final totals = totalsAsync.asData?.value ?? {};
-
           final totalIn =
               totals.values.fold(0.0, (s, v) => s + (v['in'] ?? 0));
           final totalOut =
               totals.values.fold(0.0, (s, v) => s + (v['out'] ?? 0));
           final net = totalIn - totalOut;
 
-          return CustomScrollView(
-            slivers: [
-              // Top KPI cards
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 16, 12, 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _KpiCard(
-                          label: 'Total Income',
-                          amount: totalIn,
-                          color: const Color(0xFF34C759),
-                          icon: CupertinoIcons.arrow_down_left_circle_fill,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _KpiCard(
-                          label: 'Total Expenditure',
-                          amount: totalOut,
-                          color: const Color(0xFFFF3B30),
-                          icon: CupertinoIcons.arrow_up_right_circle_fill,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _KpiCard(
-                          label: 'Net',
-                          amount: net,
-                          color: net >= 0
-                              ? const Color(0xFF007AFF)
-                              : const Color(0xFFFF3B30),
-                          icon: CupertinoIcons.chart_bar_circle_fill,
-                          isBalance: true,
-                        ),
-                      ),
-                    ],
-                  ),
+          return SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWide ? 560 : double.infinity,
                 ),
-              ),
-              // Account list
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                  child: Text('All Accounts',
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1C1C1E)
-                              .withValues(alpha: 0.9),
-                          letterSpacing: -0.2)),
-                ),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (_, i) {
-                    final acc = list[i];
-                    final accIn = (totals[acc.id]?['in'] ?? 0);
-                    final accOut = (totals[acc.id]?['out'] ?? 0);
-                    final accNet = accIn - accOut;
-                    final isFirst = i == 0;
-                    final isLast = i == list.length - 1;
+                child: CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isWide ? 0 : 12),
+                      sliver: SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _KpiCard(
+                                  label: 'Total Income',
+                                  amount: totalIn,
+                                  color: const Color(0xFF34C759),
+                                  icon: CupertinoIcons
+                                      .arrow_down_left_circle_fill,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _KpiCard(
+                                  label: 'Total Expenditure',
+                                  amount: totalOut,
+                                  color: const Color(0xFFFF3B30),
+                                  icon: CupertinoIcons
+                                      .arrow_up_right_circle_fill,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _KpiCard(
+                                  label: 'Net',
+                                  amount: net,
+                                  color: net >= 0
+                                      ? const Color(0xFF007AFF)
+                                      : const Color(0xFFFF3B30),
+                                  icon: CupertinoIcons
+                                      .chart_bar_circle_fill,
+                                  isBalance: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isWide ? 0 : 12),
+                      sliver: SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                              4, 8, 4, 8),
+                          child: Text('All Accounts',
+                              style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1C1C1E)
+                                      .withValues(alpha: 0.9),
+                                  letterSpacing: -0.1)),
+                        ),
+                      ),
+                    ),
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (_, i) {
+                          final acc = list[i];
+                          final accIn =
+                              (totals[acc.id]?['in'] ?? 0);
+                          final accOut =
+                              (totals[acc.id]?['out'] ?? 0);
+                          final accNet = accIn - accOut;
 
-                    return Container(
-                      margin: EdgeInsets.fromLTRB(
-                        12,
-                        isFirst ? 0 : 0,
-                        12,
-                        isLast ? 8 : 0,
-                      ),
-                      decoration: BoxDecoration(
-                        color: CupertinoColors.systemBackground,
-                        borderRadius: BorderRadius.only(
-                          topLeft: isFirst
-                              ? const Radius.circular(14)
-                              : Radius.zero,
-                          topRight: isFirst
-                              ? const Radius.circular(14)
-                              : Radius.zero,
-                          bottomLeft: isLast
-                              ? const Radius.circular(14)
-                              : Radius.zero,
-                          bottomRight: isLast
-                              ? const Radius.circular(14)
-                              : Radius.zero,
-                        ),
-                        border: Border(
-                          left: BorderSide(
-                              color: CupertinoColors.separator
-                                  .withValues(alpha: 0.3),
-                              width: 0.5),
-                          right: BorderSide(
-                              color: CupertinoColors.separator
-                                  .withValues(alpha: 0.3),
-                              width: 0.5),
-                          bottom: isLast
-                              ? BorderSide(
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 6),
+                            decoration: BoxDecoration(
+                              color:
+                                  CupertinoColors.systemBackground,
+                              borderRadius:
+                                  BorderRadius.circular(14),
+                              border: Border.all(
                                   color: CupertinoColors.separator
-                                      .withValues(alpha: 0.3),
-                                  width: 0.5)
-                              : BorderSide.none,
-                        ),
-                      ),
-                      child: CupertinoButton(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 14),
-                        borderRadius: BorderRadius.zero,
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/accounts/edit',
-                            arguments: acc,
-                          );
-                        },
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xFF007AFF),
-                                    Color(0xFF5856D6)
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                borderRadius:
-                                    BorderRadius.circular(12),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  acc.name.isNotEmpty
-                                      ? acc.name[0].toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    color: CupertinoColors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
+                                      .withValues(alpha: 0.25),
+                                  width: 0.5),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: const Color(0xFF000000)
+                                        .withValues(alpha: 0.02),
+                                    blurRadius: 4,
+                                    offset:
+                                        const Offset(0, 1)),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                            child: CupertinoButton(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              borderRadius:
+                                  BorderRadius.circular(14),
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/accounts/edit',
+                                  arguments: acc,
+                                );
+                              },
+                              child: Row(
                                 children: [
-                                  Text(
-                                    acc.name,
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1C1C1E),
-                                      letterSpacing: -0.1,
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      gradient:
+                                          const LinearGradient(
+                                        colors: [
+                                          Color(0xFF007AFF),
+                                          Color(0xFF5856D6)
+                                        ],
+                                        begin:
+                                            Alignment.topLeft,
+                                        end: Alignment
+                                            .bottomRight,
+                                      ),
+                                      borderRadius:
+                                          BorderRadius.circular(
+                                              12),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        acc.name.isNotEmpty
+                                            ? acc.name[0]
+                                                .toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          color:
+                                              CupertinoColors
+                                                  .white,
+                                          fontSize: 18,
+                                          fontWeight:
+                                              FontWeight.w700,
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Row(
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment
+                                              .start,
+                                      children: [
+                                        Text(
+                                          acc.name,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight:
+                                                FontWeight.w600,
+                                            color: Color(
+                                                0xFF1C1C1E),
+                                            letterSpacing: -0.1,
+                                          ),
+                                        ),
+                                        const SizedBox(
+                                            height: 4),
+                                        Row(
+                                          children: [
+                                            _miniStat(
+                                              'Income',
+                                              accIn,
+                                              const Color(
+                                                  0xFF34C759),
+                                            ),
+                                            const SizedBox(
+                                                width: 12),
+                                            _miniStat(
+                                              'Expense',
+                                              accOut,
+                                              const Color(
+                                                  0xFFFF3B30),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.end,
                                     children: [
-                                      _miniStat(
-                                        'Income',
-                                        accIn,
-                                        const Color(0xFF34C759),
+                                      Text(
+                                        '₹ ${fmt.format(accNet.round())}',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight:
+                                              FontWeight.w700,
+                                          color: accNet >= 0
+                                              ? const Color(
+                                                  0xFF34C759)
+                                              : const Color(
+                                                  0xFFFF3B30),
+                                        ),
                                       ),
-                                      const SizedBox(
-                                          width: 14),
-                                      _miniStat(
-                                        'Expense',
-                                        accOut,
-                                        const Color(
-                                            0xFFFF3B30),
+                                      const SizedBox(height: 2),
+                                      const Text(
+                                        'Balance',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: Color(
+                                                0xFF8E8E93)),
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                      CupertinoIcons
+                                          .chevron_right,
+                                      size: 14,
+                                      color: Color(0xFFC7C7CC)),
                                 ],
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '₹ ${fmt.format(accNet.round())}',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: accNet >= 0
-                                        ? const Color(0xFF34C759)
-                                        : const Color(0xFFFF3B30),
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Balance',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: const Color(0xFF8E8E93)
-                                        .withValues(alpha: 0.8),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(
-                                CupertinoIcons.chevron_right,
-                                size: 14,
-                                color: Color(0xFFC7C7CC)),
-                          ],
-                        ),
+                          );
+                        },
+                        childCount: list.length,
                       ),
-                    );
-                  },
-                  childCount: list.length,
+                    ),
+                    const SliverToBoxAdapter(
+                        child: SizedBox(height: 20)),
+                  ],
                 ),
               ),
-              const SliverToBoxAdapter(
-                  child: SizedBox(height: 20)),
-            ],
+            ),
           );
         },
       ),
@@ -376,10 +399,10 @@ class AccountListScreen extends HookConsumerWidget {
       children: [
         Text('$label: ',
             style: const TextStyle(
-                fontSize: 12, color: Color(0xFF8E8E93))),
+                fontSize: 11, color: Color(0xFF8E8E93))),
         Text('₹ ${fmt.format(value)}',
             style: TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: color)),
       ],
@@ -387,9 +410,6 @@ class AccountListScreen extends HookConsumerWidget {
   }
 }
 
-// ============================================================
-// KPI CARD (reused)
-// ============================================================
 class _KpiCard extends StatelessWidget {
   final String label;
   final double amount;
@@ -408,19 +428,18 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: CupertinoColors.systemBackground,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: CupertinoColors.separator.withValues(alpha: 0.3),
+            color: CupertinoColors.separator.withValues(alpha: 0.25),
             width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: const Color(0xFF000000).withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -429,13 +448,12 @@ class _KpiCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 26,
-                height: 26,
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 14, color: color),
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(7)),
+                child: Icon(icon, size: 13, color: color),
               ),
               const Spacer(),
               if (isBalance)
@@ -457,24 +475,23 @@ class _KpiCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(label,
               style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   color: Color(0xFF8E8E93),
                   fontWeight: FontWeight.w500,
                   letterSpacing: -0.1)),
-          const SizedBox(height: 2),
+          const SizedBox(height: 1),
           Text(
             '₹ ${NumberFormat('#,##,###').format(amount.round())}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: color,
-              letterSpacing: -0.3,
-            ),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: color,
+                letterSpacing: -0.3),
           ),
         ],
       ),

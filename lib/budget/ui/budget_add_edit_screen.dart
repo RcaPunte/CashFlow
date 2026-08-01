@@ -3,6 +3,8 @@ import 'package:cashledger/budget/model/budget_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+const double kTabletBreakpoint = 800.0;
+
 /// Create or edit a budget (metadata only — items are added from the detail screen)
 class BudgetAddEditScreen extends ConsumerStatefulWidget {
   final Budget? existingBudget;
@@ -47,59 +49,140 @@ class _BudgetAddEditScreenState extends ConsumerState<BudgetAddEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width >= kTabletBreakpoint;
+
     return CupertinoPageScaffold(
+      backgroundColor: const Color(0xFFF2F2F7),
       navigationBar: CupertinoNavigationBar(
-        middle: Text(isEditing ? 'Edit Budget' : 'New Budget'),
+        backgroundColor: const Color(0xFFFFFFFF).withValues(alpha: 0.96),
+        middle: Text(isEditing ? 'Edit Budget' : 'New Budget',
+            style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2)),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: _isSaving ? null : _save,
           child: _isSaving
               ? const CupertinoActivityIndicator()
-              : const Text('Save'),
+              : const Text('Save',
+                  style: TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w600)),
         ),
       ),
-      child: _buildForm(),
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isWide ? 560 : double.infinity,
+            ),
+            child: _buildForm(isWide: isWide),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm({required bool isWide}) {
     final years = List.generate(5, (i) => DateTime.now().year - 2 + i);
 
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(16),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              // ── Budget Name ──
-              CupertinoTextFormFieldRow(
-                controller: _nameController,
-                placeholder: 'Budget Name',
-                prefix: const Text('Name'),
-              ),
-              const SizedBox(height: 16),
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+          isWide ? 0 : 12, 16, isWide ? 0 : 12, 40),
+      children: [
+        // ── Budget Name ──
+        Container(
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: CupertinoColors.separator
+                    .withValues(alpha: 0.25),
+                width: 0.5),
+          ),
+          child: CupertinoTextFormFieldRow(
+            controller: _nameController,
+            placeholder: 'Budget Name',
+            prefix: const Padding(
+              padding: EdgeInsets.only(left: 12),
+              child: Icon(CupertinoIcons.doc_text,
+                  size: 20, color: CupertinoColors.systemBlue),
+            ),
+            style: const TextStyle(fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 16),
 
-              // ── Year Type ──
-              const Text('Year Type',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-              const SizedBox(height: 8),
+        // ── Year Type ──
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: CupertinoColors.separator
+                    .withValues(alpha: 0.25),
+                width: 0.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(left: 12, top: 8),
+                child: Text('Year Type',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF8E8E93))),
+              ),
               CupertinoSlidingSegmentedControl<YearType>(
                 groupValue: _yearType,
+                backgroundColor:
+                    CupertinoColors.systemBackground,
+                thumbColor: CupertinoColors.systemBlue,
+                padding: const EdgeInsets.all(4),
                 onValueChanged: (val) {
                   if (val != null) setState(() => _yearType = val);
                 },
                 children: {
-                  YearType.calendar: Text(YearType.calendar.shortLabel),
-                  YearType.financial: Text(YearType.financial.shortLabel),
+                  YearType.calendar: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(YearType.calendar.shortLabel,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  YearType.financial: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: Text(YearType.financial.shortLabel,
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ),
                 },
               ),
-              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
 
-              // ── Year ──
+        // ── Year Picker ──
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: CupertinoColors.separator
+                    .withValues(alpha: 0.25),
+                width: 0.5),
+          ),
+          child: Column(
+            children: [
               SizedBox(
-                height: 200,
+                height: 160,
                 child: CupertinoPicker(
-                  itemExtent: 32,
+                  itemExtent: 36,
                   scrollController: FixedExtentScrollController(
                     initialItem: years.indexOf(_selectedYear),
                   ),
@@ -110,65 +193,175 @@ class _BudgetAddEditScreenState extends ConsumerState<BudgetAddEditScreen> {
                     final label = _yearType == YearType.financial
                         ? 'FY $y-${(y + 1).toString().substring(2)}'
                         : '$y';
-                    return Center(child: Text(label));
+                    return Center(
+                        child: Text(label,
+                            style: const TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w500)));
                   }).toList(),
                 ),
               ),
+              const SizedBox(height: 4),
               Text(
                 _yearType == YearType.financial
                     ? 'Period: Apr $_selectedYear – Mar ${_selectedYear + 1}'
                     : 'Period: Jan $_selectedYear – Dec $_selectedYear',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 12,
-                    color: CupertinoColors.secondaryLabel
-                        .resolveFrom(context)),
+                style: const TextStyle(
+                    fontSize: 12, color: Color(0xFF8E8E93)),
               ),
-              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
 
-              // ── Budget Type ──
+        // ── Budget Type ──
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: CupertinoColors.separator
+                    .withValues(alpha: 0.25),
+                width: 0.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(left: 12, top: 8),
+                child: Text('Budget Type',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: Color(0xFF8E8E93))),
+              ),
               CupertinoSlidingSegmentedControl<BudgetType>(
                 groupValue: _budgetType,
+                backgroundColor:
+                    CupertinoColors.systemBackground,
+                thumbColor: CupertinoColors.systemBlue,
+                padding: const EdgeInsets.all(4),
                 onValueChanged: (val) {
                   if (val != null) setState(() => _budgetType = val);
                 },
-                children: {
-                  BudgetType.annual: const Text('Annual'),
-                  BudgetType.supplementary: const Text('Suppl'),
-                  BudgetType.emergency: const Text('Emerg'),
-                  BudgetType.revised: const Text('Revised'),
+                children: const {
+                  BudgetType.annual: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Text('Annual',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  BudgetType.supplementary: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Text('Suppl',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  BudgetType.emergency: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Text('Emerg',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  BudgetType.revised: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Text('Revised',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600)),
+                  ),
                 },
               ),
-              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
 
-              // ── Opening Balance ──
-              CupertinoTextFormFieldRow(
-                controller: _openingBalanceController,
-                placeholder: '0',
-                keyboardType: TextInputType.number,
-                prefix: const Text('Opening Balance (₹)'),
-              ),
-              const SizedBox(height: 16),
+        // ── Opening Balance ──
+        Container(
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: CupertinoColors.separator
+                    .withValues(alpha: 0.25),
+                width: 0.5),
+          ),
+          child: CupertinoTextFormFieldRow(
+            controller: _openingBalanceController,
+            placeholder: '0',
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            prefix: const Padding(
+              padding: EdgeInsets.only(left: 12),
+              child: Text('Opening Balance',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Color(0xFF1C1C1E))),
+            ),
+            style: const TextStyle(fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 12),
 
-              // ── Notes ──
-              CupertinoTextFormFieldRow(
-                controller: _notesController,
-                placeholder: 'Optional notes',
-                prefix: const Text('Notes'),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
+        // ── Notes ──
+        Container(
+          decoration: BoxDecoration(
+            color: CupertinoColors.systemBackground,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+                color: CupertinoColors.separator
+                    .withValues(alpha: 0.25),
+                width: 0.5),
+          ),
+          child: CupertinoTextFormFieldRow(
+            controller: _notesController,
+            placeholder: 'Optional notes',
+            prefix: const Padding(
+              padding: EdgeInsets.only(left: 12),
+              child: Icon(CupertinoIcons.doc_text,
+                  size: 20, color: CupertinoColors.systemGrey),
+            ),
+            maxLines: 2,
+            style: const TextStyle(fontSize: 15),
+          ),
+        ),
+        const SizedBox(height: 24),
 
-              // ── Info ──
-              Text(
-                'After saving, you can add budget items (accounts with amounts) from the budget detail screen.',
-                style: TextStyle(
-                    fontSize: 12,
-                    color: CupertinoColors.tertiaryLabel.resolveFrom(context),
-                    fontStyle: FontStyle.italic),
-              ),
-              const SizedBox(height: 40),
-            ]),
+        // ── Save Button ──
+        CupertinoButton(
+          color: CupertinoColors.systemBlue,
+          borderRadius: BorderRadius.circular(14),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          onPressed: _isSaving ? null : _save,
+          child: Text(
+            isEditing ? 'Update Budget' : 'Create Budget',
+            style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: CupertinoColors.white,
+                letterSpacing: -0.1),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // ── Info ──
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            'After saving, you can add budget items (accounts with amounts) from the budget detail screen.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 12,
+                color: CupertinoColors.tertiaryLabel
+                    .resolveFrom(context),
+                fontStyle: FontStyle.italic),
           ),
         ),
       ],

@@ -2,87 +2,70 @@ import 'package:cashledger/account/ui/ac_tree.dart';
 import 'package:cashledger/account/ui/create_ac.dart';
 import 'package:cashledger/cash_book/ui/widget/financial_yeaer_selector.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Material;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-//ACTIVE
 class AccountsPage extends ConsumerWidget {
   const AccountsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final year = ref.watch(yearProvider);
-    // final accountsAsync = ref.watch(accountsListProvider);
+    final isWide = MediaQuery.of(context).size.width >= 800;
 
-    return Material(
-      child: CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(
-          middle: const Text("Accounts"),
-          trailing: CupertinoButton(
-            padding: EdgeInsets.zero,
-            child: const Icon(CupertinoIcons.add),
-            onPressed: () {
-              showCupertinoDialog(
-                context: context,
-                builder: (_) => CreateAccountDialog(year: year),
-              );
-            },
+    return CupertinoPageScaffold(
+      backgroundColor: const Color(0xFFF2F2F7),
+      navigationBar: CupertinoNavigationBar(
+        backgroundColor: const Color(0xFFFFFFFF).withValues(alpha: 0.96),
+        middle: const Text('Accounts',
+            style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2)),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF007AFF), Color(0xFF5856D6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF007AFF).withValues(alpha: 0.3),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(CupertinoIcons.add,
+                size: 18, color: CupertinoColors.white),
           ),
+          onPressed: () {
+            showCupertinoDialog(
+              context: context,
+              builder: (_) => CreateAccountDialog(year: year),
+            );
+          },
         ),
-        child: SingleChildScrollView(
-          child: AccountTreeView(yearId: year.toString()),
+      ),
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isWide ? 560 : double.infinity,
+            ),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(
+                  horizontal: isWide ? 0 : 12, vertical: 8),
+              child: AccountTreeView(yearId: year.toString()),
+            ),
+          ),
         ),
       ),
     );
   }
 }
-
-// class _AccountTile extends ConsumerWidget {
-//   final AccountModel account;
-//   final List<AccountModel> children;
-
-//   const _AccountTile({required this.account, required this.children});
-
-//   @override
-//   Widget build(BuildContext context, WidgetRef ref) {
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         ListTile(
-//           title: Text(account.name),
-//           trailing: Row(
-//             mainAxisSize: MainAxisSize.min,
-//             children: [
-//               if (!account.isLocked)
-//                 IconButton(
-//                   icon: const Icon(CupertinoIcons.add),
-//                   onPressed: () {
-//                     showCupertinoDialog(
-//                       context: context,
-//                       builder: (_) => CreateAccountDialog(
-//                         year: account.year,
-//                         parent: account,
-//                       ),
-//                     );
-//                   },
-//                 ),
-//               if (account.isLocked)
-//                 const Icon(
-//                   CupertinoIcons.lock,
-//                   size: 18,
-//                   color: CupertinoColors.systemGrey,
-//                 ),
-//             ],
-//           ),
-//         ),
-//         ...children.map(
-//           (c) => Padding(
-//             padding: const EdgeInsets.only(left: 24),
-//             child: ListTile(title: Text("• ${c.name}")),
-//           ),
-//         ),
-//         const Divider(height: 1),
-//       ],
-//     );
-//   }
-// }

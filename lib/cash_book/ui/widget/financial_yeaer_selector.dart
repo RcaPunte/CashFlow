@@ -119,26 +119,26 @@ class YearSelector extends ConsumerWidget {
     final year = ref.watch(yearProvider);
 
     return CupertinoButton(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      borderRadius: BorderRadius.circular(14),
+      color: CupertinoColors.systemGrey5,
       onPressed: () => _showPicker(context, ref),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: CupertinoColors.systemGrey5,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            const Icon(CupertinoIcons.calendar, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              year.toString(),
-              style: const TextStyle(fontWeight: FontWeight.w600),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(CupertinoIcons.calendar, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            year.toString(),
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 15,
+              color: CupertinoColors.label,
             ),
-            const SizedBox(width: 4),
-            const Icon(CupertinoIcons.chevron_down, size: 14),
-          ],
-        ),
+          ),
+          const SizedBox(width: 4),
+          const Icon(CupertinoIcons.chevron_down, size: 14),
+        ],
       ),
     );
   }

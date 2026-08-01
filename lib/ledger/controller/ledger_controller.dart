@@ -69,6 +69,20 @@ class LedgerControllerNotifier extends AsyncNotifier<LedgerState> {
     final fromStr = from.toIso8601String();
     final toStr = to.toIso8601String();
 
+    // Gather IDs to filter: selected account + all its children
+    final accountIds = <String>[];
+    if (accountId != null && accountId.isNotEmpty) {
+      accountIds.add(accountId);
+      // Fetch all accounts to find children of this parent
+      final childRows = await supabase
+          .from('accounts')
+          .select('id')
+          .eq('parent_account_id', accountId);
+      for (final child in childRows) {
+        accountIds.add(child['id'] as String);
+      }
+    }
+
     // ───── 1. Compute Opening Balance (before 'from' date) ─────
     double openingBalance = 0.0;
     var beforeQuery = supabase
@@ -76,8 +90,8 @@ class LedgerControllerNotifier extends AsyncNotifier<LedgerState> {
         .select("amount, type")
         .lt(fromCol, fromStr);
 
-    if (accountId != null && accountId.isNotEmpty) {
-      beforeQuery = beforeQuery.eq("account_id", accountId);
+    if (accountIds.isNotEmpty) {
+      beforeQuery = beforeQuery.inFilter('account_id', accountIds);
     }
 
     final beforeData = await beforeQuery;
@@ -97,8 +111,8 @@ class LedgerControllerNotifier extends AsyncNotifier<LedgerState> {
         .gte(fromCol, fromStr)
         .lte(fromCol, toStr);
 
-    if (accountId != null && accountId.isNotEmpty) {
-      query = query.eq('account_id', accountId);
+    if (accountIds.isNotEmpty) {
+      query = query.inFilter('account_id', accountIds);
     }
 
     final res = await query;
