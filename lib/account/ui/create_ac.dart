@@ -55,7 +55,7 @@ class _CreateAccountDialogState extends ConsumerState<CreateAccountDialog> {
 
     try {
       await Supabase.instance.client.from('accounts').insert({
-        'user_id': Supabase.instance.client.auth.currentUser?.id,
+        'user_id': Supabase.instance.client.auth.currentUser?.id ?? '',
         'parent_account_id': widget.parent?.id,
         'id': const Uuid().v4(),
 

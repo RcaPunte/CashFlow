@@ -91,8 +91,7 @@ class AccountAddScreen extends HookConsumerWidget {
                   final id = const Uuid().v4();
 
                   final account = {
-                    'user_id':
-                        "dae942b7-4188-4283-8a90-1a1cc224b167", //Supabase.instance.client.auth.currentUser.id??"sdf",
+                    'user_id': Supabase.instance.client.auth.currentUser?.id ?? '',
                     "id": id,
                     "name": nameController.text,
                     "description": descriptionController.text,

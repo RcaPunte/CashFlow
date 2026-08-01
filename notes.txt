@@ -36,3 +36,95 @@ Since you're using __Supabase Auth__ (not Firebase Auth), this rewrite is not ne
 
 
 'dae942b7-4188-4283-8a90-1a1cc224b167'
+
+
+
+BUDGET MODULE — Supabase Migration SQL
+Run these in the Supabase SQL Editor:
+
+-- 1. budgets table
+CREATE TABLE IF NOT EXISTS budgets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  year INT NOT NULL,
+  year_type TEXT NOT NULL DEFAULT 'calendar',  -- 'calendar' | 'financial'
+  type TEXT NOT NULL DEFAULT 'annual',         -- 'annual' | 'supplementary' | 'emergency' | 'revised'
+  status TEXT NOT NULL DEFAULT 'draft',        -- 'draft' | 'submitted' | 'approved' | 'rejected'
+  account_id UUID REFERENCES accounts(id),     -- NULL = org-wide budget; FK = department-specific budget
+  notes TEXT,
+  approved_by TEXT,
+  approved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  user_id UUID NOT NULL REFERENCES auth.users(id)
+);
+
+-- If the table already exists without account_id, run:
+-- ALTER TABLE budgets ADD COLUMN account_id UUID REFERENCES accounts(id);
+
+-- 2. budget_items table
+CREATE TABLE IF NOT EXISTS budget_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  budget_id UUID NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  budgeted_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+  previous_actual NUMERIC(12,2) NOT NULL DEFAULT 0,  -- frozen snapshot from prior year
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. budget_approvals table (audit trail)
+CREATE TABLE IF NOT EXISTS budget_approvals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  budget_id UUID NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,                      -- 'submitted' | 'approved' | 'rejected' | 'revised'
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  comment TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE budget_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE budget_approvals ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies: users can only see their own org's budgets
+CREATE POLICY "Users can view their own budgets"
+  ON budgets FOR SELECT
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own budgets"
+  ON budgets FOR INSERT
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can update their own budgets"
+  ON budgets FOR UPDATE
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own budgets"
+  ON budgets FOR DELETE
+  USING (user_id = auth.uid());
+
+-- budget_items inherit from budgets
+CREATE POLICY "Users can view items of their budgets"
+  ON budget_items FOR SELECT
+  USING (budget_id IN (SELECT id FROM budgets WHERE user_id = auth.uid()));
+
+CREATE POLICY "Users can insert items into their budgets"
+  ON budget_items FOR INSERT
+  WITH CHECK (budget_id IN (SELECT id FROM budgets WHERE user_id = auth.uid()));
+
+CREATE POLICY "Users can update items in their budgets"
+  ON budget_items FOR UPDATE
+  USING (budget_id IN (SELECT id FROM budgets WHERE user_id = auth.uid()));
+
+CREATE POLICY "Users can delete items from their budgets"
+  ON budget_items FOR DELETE
+  USING (budget_id IN (SELECT id FROM budgets WHERE user_id = auth.uid()));
+
+-- budget_approvals inherit from budgets
+CREATE POLICY "Users can view approvals of their budgets"
+  ON budget_approvals FOR SELECT
+  USING (budget_id IN (SELECT id FROM budgets WHERE user_id = auth.uid()));
+
+CREATE POLICY "Users can insert approvals for their budgets"
+  ON budget_approvals FOR INSERT
+  WITH CHECK (budget_id IN (SELECT id FROM budgets WHERE user_id = auth.uid()));

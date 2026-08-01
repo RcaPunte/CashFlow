@@ -13,8 +13,6 @@ class EntriesRepository {
 
   final _supabase = Supabase.instance.client;
 
-  String? get _userId => _supabase.auth.currentUser?.id;
-
   Future<List<Map<String, dynamic>>> fetchEntries() async {
     try {
       final yearPicked = ref.watch(yearProvider);
@@ -41,12 +39,9 @@ class EntriesRepository {
     required String accountId,
     required String subAccountId,
   }) async {
-    final userId = _userId;
-    if (userId == null) return;
-
     try {
       await _supabase.from('entries').insert({
-        'user_id': userId,
+        'user_id': _supabase.auth.currentUser?.id ?? '',
         'date': date.toIso8601String(),
         'amount': amount,
         'type': type,

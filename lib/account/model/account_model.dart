@@ -17,7 +17,7 @@ class AccountModel {
     this.limitPeriod,
     this.parentId,
     this.year = 2026,
-    required this.userId,
+    this.userId = '',
   });
 
   factory AccountModel.fromMap(Map<String, dynamic> m) {
@@ -50,7 +50,6 @@ class AccountModel {
       'limit_period': limitPeriod,
       'parent_account_id': parentId,
       'year': year,
-      'user_id': userId,
     };
   }
 

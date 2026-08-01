@@ -4,6 +4,7 @@ import 'package:cashledger/account/model/account_model.dart';
 import 'package:cashledger/account/ui/create_ac.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 class AccountTreeView extends ConsumerWidget {
@@ -96,7 +97,9 @@ class _AccountTreeNodeState extends ConsumerState<AccountTreeNode> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               borderRadius: BorderRadius.circular(12),
-              onPressed: () {},
+              onPressed: () {
+                context.push('/accounts/edit', extra: widget.account);
+              },
               child: Row(
                 children: [
                   if (hasChildren)
